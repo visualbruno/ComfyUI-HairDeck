@@ -1,0 +1,7 @@
+HairDeck: Animation-Ready Stylized Hair Cards from a Single Image
+https://github.com/hyz317/HairDeck  (Apache-2.0, see LICENSE in this folder)
+
+Vendored unmodified at commit c796765 ("Fix required dependency checks across platforms", 2026-11-02):
+  hairdeck/, blender/, configs/, scripts/setup/download_weights.py, LICENSE
+To update: copy the same paths from a newer checkout (git archive HEAD hairdeck blender configs
+scripts/setup/download_weights.py LICENSE) and change the commit above.

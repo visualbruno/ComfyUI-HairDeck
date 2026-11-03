@@ -1,0 +1,14 @@
+ComfyUI-HairDeck
+Licensed under the Apache License, Version 2.0 (LICENSE).
+
+This product includes HairDeck (https://github.com/hyz317/HairDeck), Apache License 2.0,
+by Yuze He, Yixiang Wei, Wang Zhao, Chuhao Chen, Yanning Zhou and Yong-Jin Liu, redistributed unmodified in
+HairDeck/ (commit and update procedure in HairDeck/UPSTREAM).
+
+Downloaded at run time, not redistributed here, each under its own licence (read them before use):
+  * HairDeck checkpoints and data, hyz317/HairDeck on Hugging Face (Apache-2.0)
+  * SAM 3, facebook/sam3 (SAM License) and its code, facebookresearch/sam3
+  * DINOv3 ViT-L/16, facebook/dinov3-vitl16-pretrain-lvd1689m (DINOv3 License) and its code, facebookresearch/dinov3
+  * BiRefNet-matting, ZhengPeng7/BiRefNet-matting (MIT)
+  * VRM Add-on for Blender, saturday06/VRM-Addon-for-Blender (MIT), patched at run time by blender/bpy_runner.py
+  * bpy, the Blender Python module (GPL-3.0-or-later), installed separately by the user

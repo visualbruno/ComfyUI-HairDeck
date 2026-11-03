@@ -1,0 +1,909 @@
+{
+  "id": "b8142334-e4c4-4f25-9a0e-a468d1e90568",
+  "revision": 0,
+  "last_node_id": 11,
+  "last_link_id": 11,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadImage",
+      "pos": [
+        0,
+        120
+      ],
+      "size": [
+        320,
+        380
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            2
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            3
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0",
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "Image_1024_00156_.png",
+        "image"
+      ],
+      "widgets_values_named": {
+        "image": "Image_1024_00156_.png",
+        "upload": "image"
+      }
+    },
+    {
+      "id": 2,
+      "type": "HairDeckModelLoader",
+      "pos": [
+        0,
+        -160
+      ],
+      "size": [
+        320,
+        200
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "HAIRDECK_MODEL",
+          "links": [
+            1
+          ]
+        }
+      ],
+      "properties": {
+        "aux_id": "visualbruno/ComfyUI-HairDeck",
+        "ver": "unknown",
+        "Node name for S&R": "HairDeckModelLoader"
+      },
+      "widgets_values": [
+        "on",
+        true,
+        true,
+        "",
+        "huggingface"
+      ],
+      "widgets_values_named": {
+        "offload": "on",
+        "load_chains": true,
+        "auto_download": true,
+        "copy_from_workspace": "",
+        "gated_source": "huggingface"
+      }
+    },
+    {
+      "id": 3,
+      "type": "HairDeckGenerate",
+      "pos": [
+        380,
+        -40
+      ],
+      "size": [
+        330,
+        282
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "HAIRDECK_MODEL",
+          "link": 1
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 2
+        },
+        {
+          "name": "mask",
+          "shape": 7,
+          "type": "MASK",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "hair",
+          "type": "HAIRDECK_HAIR",
+          "links": [
+            4,
+            5,
+            6
+          ]
+        },
+        {
+          "name": "mesh",
+          "type": "TRIMESH",
+          "links": null
+        },
+        {
+          "name": "preprocess",
+          "type": "IMAGE",
+          "links": [
+            7
+          ]
+        },
+        {
+          "name": "model_input",
+          "type": "IMAGE",
+          "links": [
+            8
+          ]
+        },
+        {
+          "name": "info",
+          "type": "STRING",
+          "links": [
+            9
+          ]
+        }
+      ],
+      "properties": {
+        "aux_id": "visualbruno/ComfyUI-HairDeck",
+        "ver": "unknown",
+        "Node name for S&R": "HairDeckGenerate"
+      },
+      "widgets_values": [
+        3,
+        "fixed",
+        50,
+        2,
+        true,
+        "HairDeck/hair",
+        true
+      ],
+      "widgets_values_named": {
+        "seed": 3,
+        "control_after_generate": "fixed",
+        "steps": 50,
+        "cfg": 2,
+        "generate_chains": true,
+        "filename_prefix": "HairDeck/hair",
+        "invert_mask": true
+      }
+    },
+    {
+      "id": 4,
+      "type": "HairDeckSaveGLB",
+      "pos": [
+        766.9013604125976,
+        -216.49601690673833
+      ],
+      "size": [
+        359.1127208251953,
+        154.13863958740234
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "hair",
+          "type": "HAIRDECK_HAIR",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model_3d",
+          "type": "FILE_3D_GLB",
+          "links": null
+        },
+        {
+          "name": "glb_path",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "aux_id": "visualbruno/ComfyUI-HairDeck",
+        "ver": "unknown",
+        "Node name for S&R": "HairDeckSaveGLB"
+      },
+      "widgets_values": [
+        false,
+        false,
+        "3D/HairDeck"
+      ],
+      "widgets_values_named": {
+        "include_head_proxy": false,
+        "show_chains": false,
+        "filename_prefix": "3D/HairDeck"
+      }
+    },
+    {
+      "id": 5,
+      "type": "HairDeckRiggedGLB",
+      "pos": [
+        1172.662,
+        -215.36463958740242
+      ],
+      "size": [
+        352.9012791748046,
+        163.012
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "hair",
+          "type": "HAIRDECK_HAIR",
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model_3d",
+          "type": "FILE_3D_GLB",
+          "links": [
+            11
+          ]
+        },
+        {
+          "name": "glb_path",
+          "type": "STRING",
+          "links": null
+        },
+        {
+          "name": "info",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "aux_id": "visualbruno/ComfyUI-HairDeck",
+        "ver": "unknown",
+        "Node name for S&R": "HairDeckRiggedGLB"
+      },
+      "widgets_values": [
+        "3D/HairDeck_rigged",
+        "auto",
+        ""
+      ],
+      "widgets_values_named": {
+        "filename_prefix": "3D/HairDeck_rigged",
+        "blender": "auto",
+        "blender_path": ""
+      }
+    },
+    {
+      "id": 6,
+      "type": "HairDeckExportVRM",
+      "pos": [
+        1558.0093740234374,
+        -213.5853129882813
+      ],
+      "size": [
+        359.1127208251953,
+        158.57531979370117
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "hair",
+          "type": "HAIRDECK_HAIR",
+          "link": 6
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model_3d",
+          "type": "FILE_3D_GLB",
+          "links": [
+            10
+          ]
+        },
+        {
+          "name": "vrm_path",
+          "type": "STRING",
+          "links": null
+        },
+        {
+          "name": "info",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "aux_id": "visualbruno/ComfyUI-HairDeck",
+        "ver": "unknown",
+        "Node name for S&R": "HairDeckExportVRM"
+      },
+      "widgets_values": [
+        "3D/HairDeck_avatar",
+        "auto",
+        ""
+      ],
+      "widgets_values_named": {
+        "filename_prefix": "3D/HairDeck_avatar",
+        "blender": "auto",
+        "blender_path": ""
+      }
+    },
+    {
+      "id": 7,
+      "type": "PreviewImage",
+      "pos": [
+        780,
+        40
+      ],
+      "size": [
+        360,
+        300
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0",
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": [],
+      "widgets_values_named": {}
+    },
+    {
+      "id": 8,
+      "type": "PreviewImage",
+      "pos": [
+        1170,
+        40
+      ],
+      "size": [
+        300,
+        300
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0",
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": [],
+      "widgets_values_named": {}
+    },
+    {
+      "id": 9,
+      "type": "PreviewAny",
+      "pos": [
+        381.6528925619837,
+        301.48760330578517
+      ],
+      "size": [
+        336.83240709228517,
+        193.18629645385738
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "source",
+          "type": "*",
+          "link": 9
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0",
+        "Node name for S&R": "PreviewAny"
+      },
+      "widgets_values": [],
+      "widgets_values_named": {}
+    },
+    {
+      "id": 10,
+      "type": "Preview3DAdvanced",
+      "pos": [
+        2054.683917494054,
+        -375.4533582831268
+      ],
+      "size": [
+        540.0667114257812,
+        682.7332885742187
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model_3d",
+          "type": "FILE_3D_GLB,FILE_3D_GLTF,FILE_3D_FBX,FILE_3D_OBJ,FILE_3D_STL,FILE_3D_USDZ,FILE_3D",
+          "link": 10
+        },
+        {
+          "name": "model_3d_info",
+          "shape": 7,
+          "type": "LOAD3D_MODEL_INFO",
+          "link": null
+        },
+        {
+          "name": "camera_info",
+          "shape": 7,
+          "type": "LOAD3D_CAMERA",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model_3d",
+          "type": "FILE_3D",
+          "links": null
+        },
+        {
+          "name": "model_3d_info",
+          "type": "LOAD3D_MODEL_INFO",
+          "links": null
+        },
+        {
+          "name": "camera_info",
+          "type": "LOAD3D_CAMERA",
+          "links": null
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0",
+        "Node name for S&R": "Preview3DAdvanced",
+        "Camera Config": {
+          "cameraType": "perspective",
+          "fov": 35,
+          "state": {
+            "position": {
+              "x": -0.3003169362334857,
+              "y": 1.8839532782154678,
+              "z": -2.789482822612102
+            },
+            "target": {
+              "x": -0.030891677790624385,
+              "y": 0.8681843782074015,
+              "z": 0.05036177628523151
+            },
+            "zoom": 1,
+            "cameraType": "perspective",
+            "quaternion": {
+              "x": 0.008047103407447912,
+              "y": 0.9843058817920736,
+              "z": 0.17001992748348266,
+              "w": -0.04658754613402313
+            },
+            "fov": 35,
+            "aspect": 1,
+            "near": 0.01,
+            "far": 10000,
+            "frustum": {
+              "left": -5,
+              "right": 5,
+              "top": 5,
+              "bottom": -5
+            }
+          }
+        },
+        "Last Time Model File": "preview3d_advanced_8e1b23662a5b45f48107443361dbd410.glb",
+        "Last Time Model Folder": "temp",
+        "Light Config": {
+          "intensity": 3,
+          "hdri": {
+            "enabled": false,
+            "hdriPath": "",
+            "showAsBackground": false,
+            "intensity": 1
+          }
+        },
+        "Scene Config": {
+          "showGrid": true,
+          "backgroundColor": "#282828",
+          "backgroundImage": "",
+          "backgroundRenderMode": "tiled",
+          "models": [
+            {
+              "position": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "quaternion": {
+                "x": 0,
+                "y": 0,
+                "z": 0,
+                "w": 1
+              },
+              "scale": {
+                "x": 1,
+                "y": 1,
+                "z": 1
+              }
+            }
+          ]
+        },
+        "Model Config": {
+          "upDirection": "original",
+          "materialMode": "original",
+          "showSkeleton": true,
+          "gizmo": {
+            "enabled": false,
+            "mode": "translate",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        }
+      },
+      "widgets_values": [
+        "",
+        1024,
+        1024
+      ],
+      "widgets_values_named": {
+        "viewport_state": "",
+        "width": 1024,
+        "height": 1024
+      }
+    },
+    {
+      "id": 11,
+      "type": "Preview3DAdvanced",
+      "pos": [
+        1534.5683619924012,
+        22.74928858150645
+      ],
+      "size": [
+        458,
+        675.3333129882812
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model_3d",
+          "type": "FILE_3D_GLB,FILE_3D_GLTF,FILE_3D_FBX,FILE_3D_OBJ,FILE_3D_STL,FILE_3D_USDZ,FILE_3D",
+          "link": 11
+        },
+        {
+          "name": "model_3d_info",
+          "shape": 7,
+          "type": "LOAD3D_MODEL_INFO",
+          "link": null
+        },
+        {
+          "name": "camera_info",
+          "shape": 7,
+          "type": "LOAD3D_CAMERA",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model_3d",
+          "type": "FILE_3D",
+          "links": null
+        },
+        {
+          "name": "model_3d_info",
+          "type": "LOAD3D_MODEL_INFO",
+          "links": null
+        },
+        {
+          "name": "camera_info",
+          "type": "LOAD3D_CAMERA",
+          "links": null
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0",
+        "Node name for S&R": "Preview3DAdvanced",
+        "Camera Config": {
+          "cameraType": "perspective",
+          "fov": 35,
+          "hasCustomUp": false,
+          "state": {
+            "position": {
+              "x": 0.5985546782690692,
+              "y": 1.6020861126116746,
+              "z": 1.644916702259949
+            },
+            "target": {
+              "x": -0.21147419731710632,
+              "y": 1.0401225953992055,
+              "z": -0.6158385636000892
+            },
+            "zoom": 1,
+            "cameraType": "perspective",
+            "quaternion": {
+              "x": -0.11298933798229518,
+              "y": 0.17004837865292655,
+              "z": 0.019631013138507063,
+              "w": 0.9787397926634993
+            },
+            "fov": 35,
+            "aspect": 1,
+            "near": 0.01,
+            "far": 10000,
+            "frustum": {
+              "left": -5,
+              "right": 5,
+              "top": 5,
+              "bottom": -5
+            }
+          }
+        },
+        "Last Time Model File": "preview3d_advanced_2291b5e47ca7439badf1308674dcfbf1.glb",
+        "Last Time Model Folder": "temp",
+        "Light Config": {
+          "intensity": 3,
+          "hdri": {
+            "enabled": false,
+            "hdriPath": "",
+            "showAsBackground": false,
+            "intensity": 1
+          }
+        },
+        "Scene Config": {
+          "showGrid": true,
+          "backgroundColor": "#282828",
+          "backgroundImage": "",
+          "backgroundRenderMode": "tiled",
+          "models": [
+            {
+              "position": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "quaternion": {
+                "x": 0,
+                "y": 0,
+                "z": 0,
+                "w": 1
+              },
+              "scale": {
+                "x": 1,
+                "y": 1,
+                "z": 1
+              }
+            }
+          ]
+        },
+        "Model Config": {
+          "upDirection": "original",
+          "materialMode": "original",
+          "showSkeleton": true,
+          "gizmo": {
+            "enabled": false,
+            "mode": "translate",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        }
+      },
+      "widgets_values": [
+        "",
+        1024,
+        1024
+      ],
+      "widgets_values_named": {
+        "viewport_state": "",
+        "width": 1024,
+        "height": 1024
+      }
+    }
+  ],
+  "links": [
+    [
+      1,
+      2,
+      0,
+      3,
+      0,
+      "HAIRDECK_MODEL"
+    ],
+    [
+      2,
+      1,
+      0,
+      3,
+      1,
+      "IMAGE"
+    ],
+    [
+      3,
+      1,
+      1,
+      3,
+      2,
+      "MASK"
+    ],
+    [
+      4,
+      3,
+      0,
+      4,
+      0,
+      "HAIRDECK_HAIR"
+    ],
+    [
+      5,
+      3,
+      0,
+      5,
+      0,
+      "HAIRDECK_HAIR"
+    ],
+    [
+      6,
+      3,
+      0,
+      6,
+      0,
+      "HAIRDECK_HAIR"
+    ],
+    [
+      7,
+      3,
+      2,
+      7,
+      0,
+      "IMAGE"
+    ],
+    [
+      8,
+      3,
+      3,
+      8,
+      0,
+      "IMAGE"
+    ],
+    [
+      9,
+      3,
+      4,
+      9,
+      0,
+      "STRING"
+    ],
+    [
+      10,
+      6,
+      0,
+      10,
+      0,
+      "FILE_3D_GLB"
+    ],
+    [
+      11,
+      5,
+      0,
+      11,
+      0,
+      "FILE_3D_GLB"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.7513148009015777,
+      "offset": [
+        -27.405861340989038,
+        406.096659495331
+      ]
+    },
+    "frontendVersion": "1.57.6",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}

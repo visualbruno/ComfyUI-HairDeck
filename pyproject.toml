@@ -1,0 +1,23 @@
+[project]
+name = "comfyui-hairdeck"
+description = "ComfyUI nodes for HairDeck: animation-ready stylized hair cards and spring bones from a single image, as GLB, rigged GLB or VRM."
+version = "1.0.0"
+license = {file = "LICENSE"}
+classifiers = [
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Environment :: GPU :: NVIDIA CUDA",
+]
+dependencies = ["trimesh", "scipy", "timm", "iopath", "ftfy", "regex", "pycocotools", "einops", "transformers", "kornia", "omegaconf", "termcolor", "huggingface_hub"]
+
+[project.urls]
+Repository = "https://github.com/visualbruno/ComfyUI-HairDeck"
+#  Used by Comfy Registry https://registry.comfy.org
+Documentation = "https://github.com/visualbruno/ComfyUI-HairDeck/wiki"
+"Bug Tracker" = "https://github.com/visualbruno/ComfyUI-HairDeck/issues"
+
+[tool.comfy]
+PublisherId = "visualbruno"
+DisplayName = "ComfyUI-HairDeck"
+Icon = ""
+includes = []

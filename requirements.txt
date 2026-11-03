@@ -1,0 +1,28 @@
+# HairDeck's code is bundled in HairDeck/. These are its runtime packages; most are already in a ComfyUI install.
+# Install any that are missing with --no-deps to keep your torch stack untouched.
+numpy
+scipy
+trimesh
+pillow
+opencv-python-headless
+safetensors
+huggingface_hub
+psutil
+# SAM 3 (its code is downloaded into models/hairdeck/third_party/sam3_src)
+setuptools
+timm
+iopath
+ftfy
+regex
+pycocotools
+einops
+triton-windows; sys_platform == "win32"
+# BiRefNet-matting
+transformers
+kornia
+# DINOv3 through torch.hub (its code is downloaded into models/hairdeck/third_party/dinov3_src)
+omegaconf
+termcolor
+# Rigged GLB and VRM export without a Blender install: bpy matching your Python
+# (bpy 5.1 and later for Python 3.13, bpy 4.x/5.0 for Python 3.11). Optional: a Blender executable also works.
+# bpy
