@@ -41,11 +41,11 @@
         "Node name for S&R": "LoadImage"
       },
       "widgets_values": [
-        "Image_1024_00156_.png",
+        "AnimeGirl_1024_Delight.png",
         "image"
       ],
       "widgets_values_named": {
-        "image": "Image_1024_00156_.png",
+        "image": "AnimeGirl_1024_Delight.png",
         "upload": "image"
       }
     },
@@ -74,12 +74,14 @@
         }
       ],
       "properties": {
-        "aux_id": "visualbruno/ComfyUI-HairDeck",
+        "cnr_id": "comfyui-hairdeck",
         "ver": "unknown",
-        "Node name for S&R": "HairDeckModelLoader"
+        "Node name for S&R": "HairDeckModelLoader",
+        "aux_id": "visualbruno/ComfyUI-HairDeck"
       },
       "widgets_values": [
         "on",
+        true,
         true,
         true,
         "",
@@ -88,6 +90,7 @@
       "widgets_values_named": {
         "offload": "on",
         "load_chains": true,
+        "load_colors": true,
         "auto_download": true,
         "copy_from_workspace": "",
         "gated_source": "huggingface"
@@ -102,7 +105,7 @@
       ],
       "size": [
         330,
-        282
+        306
       ],
       "flags": {},
       "order": 2,
@@ -163,9 +166,10 @@
         }
       ],
       "properties": {
-        "aux_id": "visualbruno/ComfyUI-HairDeck",
+        "cnr_id": "comfyui-hairdeck",
         "ver": "unknown",
-        "Node name for S&R": "HairDeckGenerate"
+        "Node name for S&R": "HairDeckGenerate",
+        "aux_id": "visualbruno/ComfyUI-HairDeck"
       },
       "widgets_values": [
         3,
@@ -174,6 +178,7 @@
         2,
         true,
         "HairDeck/hair",
+        true,
         true
       ],
       "widgets_values_named": {
@@ -182,7 +187,8 @@
         "steps": 50,
         "cfg": 2,
         "generate_chains": true,
-        "filename_prefix": "HairDeck/hair",
+        "colors": "HairDeck/hair",
+        "filename_prefix": true,
         "invert_mask": true
       }
     },
@@ -190,8 +196,8 @@
       "id": 4,
       "type": "HairDeckSaveGLB",
       "pos": [
-        766.9013604125976,
-        -216.49601690673833
+        767.7887208251952,
+        -209.3973367004395
       ],
       "size": [
         359.1127208251953,
@@ -220,9 +226,10 @@
         }
       ],
       "properties": {
-        "aux_id": "visualbruno/ComfyUI-HairDeck",
+        "cnr_id": "comfyui-hairdeck",
         "ver": "unknown",
-        "Node name for S&R": "HairDeckSaveGLB"
+        "Node name for S&R": "HairDeckSaveGLB",
+        "aux_id": "visualbruno/ComfyUI-HairDeck"
       },
       "widgets_values": [
         false,
@@ -276,9 +283,10 @@
         }
       ],
       "properties": {
-        "aux_id": "visualbruno/ComfyUI-HairDeck",
+        "cnr_id": "comfyui-hairdeck",
         "ver": "unknown",
-        "Node name for S&R": "HairDeckRiggedGLB"
+        "Node name for S&R": "HairDeckRiggedGLB",
+        "aux_id": "visualbruno/ComfyUI-HairDeck"
       },
       "widgets_values": [
         "3D/HairDeck_rigged",
@@ -332,9 +340,10 @@
         }
       ],
       "properties": {
-        "aux_id": "visualbruno/ComfyUI-HairDeck",
+        "cnr_id": "comfyui-hairdeck",
         "ver": "unknown",
-        "Node name for S&R": "HairDeckExportVRM"
+        "Node name for S&R": "HairDeckExportVRM",
+        "aux_id": "visualbruno/ComfyUI-HairDeck"
       },
       "widgets_values": [
         "3D/HairDeck_avatar",
@@ -423,12 +432,12 @@
       "id": 9,
       "type": "PreviewAny",
       "pos": [
-        381.6528925619837,
-        301.48760330578517
+        379.45289256198373,
+        315.4208918800039
       ],
       "size": [
         336.83240709228517,
-        193.18629645385738
+        202.84935645385724
       ],
       "flags": {},
       "order": 8,
@@ -524,22 +533,22 @@
           "fov": 35,
           "state": {
             "position": {
-              "x": -0.3003169362334857,
-              "y": 1.8839532782154678,
-              "z": -2.789482822612102
+              "x": -0.4647834082729076,
+              "y": 1.6121121585988012,
+              "z": -1.5422602977497442
             },
             "target": {
-              "x": -0.030891677790624385,
-              "y": 0.8681843782074015,
-              "z": 0.05036177628523151
+              "x": 0.05735597366493842,
+              "y": 1.2424333231592695,
+              "z": 0.1541179217754165
             },
             "zoom": 1,
             "cameraType": "perspective",
             "quaternion": {
-              "x": 0.008047103407447912,
-              "y": 0.9843058817920736,
-              "z": 0.17001992748348266,
-              "w": -0.04658754613402313
+              "x": 0.015244920805748373,
+              "y": 0.9836683235592674,
+              "z": 0.10135150687993844,
+              "w": -0.14795977044079453
             },
             "fov": 35,
             "aspect": 1,
@@ -553,7 +562,7 @@
             }
           }
         },
-        "Last Time Model File": "preview3d_advanced_8e1b23662a5b45f48107443361dbd410.glb",
+        "Last Time Model File": "preview3d_advanced_fd18b2e0a59d45a0a576b989d184ea8b.glb",
         "Last Time Model Folder": "temp",
         "Light Config": {
           "intensity": 3,
@@ -696,22 +705,22 @@
           "hasCustomUp": false,
           "state": {
             "position": {
-              "x": 0.5985546782690692,
-              "y": 1.6020861126116746,
-              "z": 1.644916702259949
+              "x": 0.3840640661137288,
+              "y": 1.614937181061654,
+              "z": 1.094586832654477
             },
             "target": {
-              "x": -0.21147419731710632,
-              "y": 1.0401225953992055,
-              "z": -0.6158385636000892
+              "x": -0.2297375322252657,
+              "y": 1.296058499218069,
+              "z": -0.6840810167372802
             },
             "zoom": 1,
             "cameraType": "perspective",
             "quaternion": {
-              "x": -0.11298933798229518,
-              "y": 0.17004837865292655,
-              "z": 0.019631013138507063,
-              "w": 0.9787397926634993
+              "x": -0.08268552204768995,
+              "y": 0.16480162791689892,
+              "z": 0.013865796952855091,
+              "w": 0.9827569727834565
             },
             "fov": 35,
             "aspect": 1,
@@ -725,7 +734,7 @@
             }
           }
         },
-        "Last Time Model File": "preview3d_advanced_2291b5e47ca7439badf1308674dcfbf1.glb",
+        "Last Time Model File": "preview3d_advanced_295dc4b033584a9791fdea21c7c1da9a.glb",
         "Last Time Model Folder": "temp",
         "Light Config": {
           "intensity": 3,
@@ -893,10 +902,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.7513148009015777,
+      "scale": 0.620921323059155,
       "offset": [
-        -27.405861340989038,
-        406.096659495331
+        111.33560853927071,
+        622.8279410151333
       ]
     },
     "frontendVersion": "1.57.6",

@@ -12,7 +12,7 @@ to build and evaluate the original card data (checked bitwise), so seeded surfac
 UVs (card_uv, cards_to_mesh(..., uv=True)): u runs across the width (0 at the +width corner, 1 at the -width corner,
 0.5 at both thickness corners, so the two faces of a card are mirror images and the mesh needs no seam), v runs along
 the card (arc length of the control points from the root over the card length). Vertices and faces are the same with
-and without UVs.
+and without UVs. Colours along a card (card_vertex_colors) follow its v.
 
 5-column cards (CHARM's hair.json templates) are not handled here: their normal field is CHARM's least-squares solve.
 Every function that meshes cards takes an optional `mesher` for other card formats.
@@ -110,6 +110,20 @@ def cards_to_mesh(cards, mesher=None, uv=False):
     return trimesh.Scene(meshes)
 
 
-def cards_to_json(cards):
-    """CHARM-style json list: [{'shape': 'square' | 'triangle', 'seq': rows}, ...]."""
-    return [{'shape': SHAPE_NAMES[sh], 'seq': seq.tolist()} for seq, sh in cards]
+def card_vertex_colors(seq, colors):
+    """(4n, 3) colours of card_mesh_vf's vertices: colors (B, 3) are the colours at the centres of B equal parts of the
+    card's v (card_uv), interpolated linearly in between and constant beyond the first and the last centre."""
+    c = np.asarray(colors, np.float64)
+    v = card_uv(seq)[:, 1]
+    x = (np.arange(len(c)) + 0.5) / len(c)
+    return np.stack([np.interp(v, x, c[:, k]) for k in range(c.shape[1])], -1)
+
+
+def cards_to_json(cards, colors=None):
+    """CHARM-style json list: [{'shape': 'square' | 'triangle', 'seq': rows}, ...]; colors: optional per card (B, 3) sRGB
+    colours along the card (card_vertex_colors), written as 'colors' (4 decimals)."""
+    out = [{'shape': SHAPE_NAMES[sh], 'seq': seq.tolist()} for seq, sh in cards]
+    if colors is not None:
+        for d, c in zip(out, colors):
+            d['colors'] = np.round(np.asarray(c, np.float64), 4).tolist()
+    return out

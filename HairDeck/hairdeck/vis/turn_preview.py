@@ -11,7 +11,8 @@ blender/vrm_hair.py writes them), plus a sphere collider for the head (the head 
 hit radius 0.02 m). As in the VRM export, the leading joints of a chain that lie inside the collider at rest stay rigid
 with the head; later joints that rest inside are not pushed out (no start-up jump). Motion about the head joint: yaw to
 +45 deg, hold, to -45 deg, hold, back to 0 (smoothstep segments), 60 Hz simulation, every second frame rendered: 3 s at
-30 fps. Drawn: the hair (flat shaded, the given colour), the head proxy (grey) and optionally the chain joints.
+30 fps. Drawn: the hair (flat shaded, in the colours along the cards of CARDS_JSON where it has them, else the given
+colour), the head proxy (grey) and optionally the chain joints.
 
 PYOPENGL_PLATFORM=egl|osmesa python -m hairdeck.vis.turn_preview CARDS_JSON CHAINS_JSON R,G,B OUT.mp4 [--chains_visible]
        [--body BODY_JSON]
@@ -30,7 +31,7 @@ import numpy as np
 import trimesh
 from PIL import Image, ImageDraw
 
-from ..cards.mesh import card_mesh_vf
+from ..cards.mesh import card_mesh_vf, card_vertex_colors
 from ..spring.sim import bind, centreline, clean, deform, rot_y, rotdiff, skin
 from ..vrm.body import body as load_body
 from ..vrm.render import look
@@ -145,15 +146,19 @@ def simulate(chains, R, piv, sphere):
     return out, info
 
 
-def flat_mesh(V, F, colour, double=True):
-    """pyrender mesh with one normal per face (flat shading)."""
+def flat_mesh(V, F, colour, double=True, vertex_colour=None):
+    """pyrender mesh with one normal per face (flat shading); vertex_colour: optional (len(V), 3) colours, taken the way
+    the one colour is (as the factor, with a white factor)."""
     pyrender = _pyrender()
     tri = V[F]
     n = np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0])
     n /= np.linalg.norm(n, axis=1, keepdims=True) + 1e-20
+    vc = None if vertex_colour is None else np.concatenate([np.asarray(vertex_colour)[F].reshape(-1, 3),
+                                                            np.ones((F.size, 1))], 1).astype(np.float32)
     prim = pyrender.Primitive(positions=tri.reshape(-1, 3).astype(np.float32), normals=np.repeat(n, 3, 0).astype(np.float32),
-                              material=pyrender.MetallicRoughnessMaterial(baseColorFactor=[*colour, 1.0], metallicFactor=0.0,
-                                                                          roughnessFactor=0.8, doubleSided=double))
+                              color_0=vc, material=pyrender.MetallicRoughnessMaterial(
+                                  baseColorFactor=[*(colour if vc is None else np.ones(3)), 1.0], metallicFactor=0.0,
+                                  roughnessFactor=0.8, doubleSided=double))
     return pyrender.Mesh([prim])
 
 
@@ -172,8 +177,9 @@ def preview(cards_json, chains_json, colour, out, show_chains=False, body=None):
     proxy, pc = head_proxy(*canonical())
     proxy_V, proxy_F = np.asarray(proxy.vertices) * m, np.asarray(proxy.faces)
     sphere = (pc * m, 0.45 * W)
-    cards = [(np.asarray(c['seq'], np.float64), 1 if c['shape'] == 'triangle' else 0) for c in json.load(open(cards_json))]
-    cards = [(s, sh) for s, sh in cards if len(s) >= 3]
+    cj = [c for c in json.load(open(cards_json)) if len(c['seq']) >= 3]
+    cards = [(np.asarray(c['seq'], np.float64), 1 if c['shape'] == 'triangle' else 0) for c in cj]
+    card_cols = [c['colors'] for c in cj] if cj and all('colors' in c for c in cj) else None
     chains_in = json.load(open(chains_json)) if chains_json != '-' else []
     chains = []
     for c in chains_in:
@@ -181,11 +187,13 @@ def preview(cards_json, chains_json, colour, out, show_chains=False, body=None):
         if len(J) >= 2:
             chains.append(dict(J=J, stiff=float(c['stiffness']), drag=DRAG, grav=np.array([0, -GRAVITY, 0])))
     # mesh + binding (hairdeck.vrm.prep's per-card procedure)
-    Vs, Fs, off = [], [], 0
+    Vs, Fs, Cs, off = [], [], [], 0
     ch, sg, wt, sg2, al = [], [], [], [], []
     rigid_mismatch = 0
-    for seq, sh in cards:
+    for j, (seq, sh) in enumerate(cards):
         v, f = card_mesh_vf(seq, sh)
+        if card_cols is not None:
+            Cs.append(card_vertex_colors(seq, card_cols[j]))
         v = v * m
         n = len(v)
         cc = int(skin([centreline(seq[:, :3]) * m], chains, W)[0][0]) if chains else -1
@@ -207,6 +215,7 @@ def preview(cards_json, chains_json, colour, out, show_chains=False, body=None):
         Fs.append(f + off)
         off += n
     V, F = np.concatenate(Vs), np.concatenate(Fs)
+    VC = np.clip(np.concatenate(Cs), 0, 1) if card_cols is not None else None
     binding = tuple(np.concatenate(x) for x in (ch, sg, wt, sg2, al))
     t = np.arange(1, int(DUR * FPS) + 1) / FPS
     R = np.stack([rot_y(np.radians(yaw_deg(tt))) for tt in t])
@@ -236,7 +245,7 @@ def preview(cards_json, chains_json, colour, out, show_chains=False, body=None):
         s.add(pyrender.OrthographicCamera(xmag=half, ymag=half, znear=0.01, zfar=40 * half), pose=look(tgt + d * 8 * half, tgt))
         for dd, kk in ((d + np.array([-0.5, 0.8, 0]), 2.4), (d + np.array([0.8, 0, 0]), 0.8), (-d + np.array([0, 0.5, 0]), 1.2)):
             s.add(pyrender.DirectionalLight(color=np.ones(3), intensity=kk), pose=look(tgt + dd, tgt))
-        s.add(flat_mesh(X[fr], F, colour))
+        s.add(flat_mesh(X[fr], F, colour, vertex_colour=VC))
         s.add(flat_mesh(np.einsum('ij,mj->mi', R[fr], proxy_V - piv) + piv, proxy_F, np.array([0.72, 0.72, 0.72]), False))
         if show_chains:
             for (heads, _), c in zip(sim, chains):

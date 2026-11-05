@@ -28,5 +28,6 @@ Table 1 leaves out the outputs that fail to scan; n counts the rows in the means
     with worker_pool(workers) as p:
         res = dict(p.imap_unordered(work, [(run, i, ref_dir, tuple(fields)) for i in idxs if i not in failed]))
     per = {i: res.get(i, {'status': 'no point cloud'}) for i in idxs}
-    mean = {k: float(np.mean([res[i][k] for i in res])) if res else float('nan') for k in fields}
+    kept = [i for i in idxs if i in res]  # in idxs order: the mean does not depend on the order the workers finish
+    mean = {k: float(np.mean([res[i][k] for i in kept])) if kept else float('nan') for k in fields}
     return dict(mean=mean, per_sample=per, n=len(res), failed=failed)

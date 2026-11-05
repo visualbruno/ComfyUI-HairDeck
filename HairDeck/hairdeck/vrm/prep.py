@@ -8,14 +8,17 @@ vertices are then bound with sim.bind against that chain: chain weight w ramping
 RAMP face widths of arc length (1 - w to the head bone), split between the nearest segment (alpha) and its neighbour
 segment (1 - alpha) when BLEND. A card whose vertices fail the lower-60% test of its chain stays rigid. Chains that bind
 no card are dropped. Without any chain (none predicted, all degenerate, or none binding a card) every card stays with
-the head bone, with the same mesh, UVs and mapping.
+the head bone, with the same mesh, UVs and mapping. Cards with colours (the image pipeline's 'colors' in the cards file)
+get them as a texture (color_atlas): one column of 8 pixels per card, the card's colours from root (bottom) to tip, the
+card's UVs mapped into the middle of its column (u to pixels 2..6, v linearly so that the bilinear texture lookup gives
+hairdeck.cards.mesh.card_vertex_colors' colours without reaching the image border).
 
 prepare(out_dir, seed, body, colour, run, prep_dir, log) writes
   RUN/JsonResults/<cards>, RUN/chains.json       the cards and chains in the dataset frame (CHARM-format json)
   PREP_DIR/<prep>.npz                            V, F, UV, vcard, vchain, vseg, vw, vseg2, valpha, chain_ptr, chain_J,
                                                   chain_J_ds, stiffness, W, fit_s, fit_t, fit_sx, fit_sz, head_joint,
-                                                  ASSIGN, RAMP, BLEND, colour (read by blender/vrm_export.py,
-                                                  blender/vrm_worker.py and hairdeck.vrm.check)
+                                                  ASSIGN, RAMP, BLEND, colour, atlas (with colours; read by
+                                                  blender/vrm_export.py, blender/vrm_worker.py and hairdeck.vrm.check)
 (<cards>, <prep>: hairdeck.vrm.body.file_name of the body)
   PREP_DIR/<prep>.json                           summary (cards on chains, chains dropped, ...)
 """
@@ -45,7 +48,7 @@ def head_to_body(cards, chains, k, b):
             continue
         q[:, :3] = (q[:, :3] - b) / k
         q[:, 3:5] /= k
-        out.append({'shape': c['shape'], 'seq': q})
+        out.append({'shape': c['shape'], 'seq': q, **({'colors': c['colors']} if 'colors' in c else {})})
     pred = [dict(joints=(np.asarray(c['joints'], np.float64) - b) / k, stiffness=c['stiffness'], n_joints=c['n_joints'])
             for c in chains]
     return out, pred
@@ -127,6 +130,20 @@ def prep(h, key, cards, pred, fit):
     return out, info
 
 
+def color_atlas(colors, uv, vcard, px=8):
+    """Per-card colours as a texture: colors per card (B, 3) sRGB 0..1 from root to tip, uv / vcard the per-vertex UVs
+    (card_uv) and card index of the mesh -> (atlas (B + 2, px * cards, 3) uint8, image rows top to bottom: the tip
+    colour, the B colours from tip to root, the root colour again; the UVs in the atlas: u into pixels 2..6 of the
+    card's column, v -> (1 + B v) / (B + 2), so v at the centre of colour b is the centre of its row (UV v up, as in
+    Blender) and the first and last colours hold to the card's ends)"""
+    C = np.clip(np.asarray(colors, np.float64), 0, 1)
+    n, B = len(C), C.shape[1]
+    C = np.concatenate([C[:, :1], C, C[:, -1:]], 1)  # root and tip repeated
+    atlas = np.repeat(np.round(C * 255).astype(np.uint8).transpose(1, 0, 2)[::-1], px, axis=1)
+    uv = np.asarray(uv, np.float64)
+    return atlas, np.stack([(px * vcard + 0.25 * px + 0.5 * px * uv[:, 0]) / (px * n), (1 + B * uv[:, 1]) / (B + 2)], 1)
+
+
 def prep_no_chains(h, key, cards, fit):
     """Every card on the head bone: the mesh, UVs and mapping of prep() with empty chain arrays."""
     W = fit['w'] / fit['s']
@@ -175,6 +192,8 @@ def prepare(out_dir, seed, body, colour, run, prep_dir, log=None):
     if out is None:
         out, info = prep_no_chains(h, body['key'], card_list(cards), body['fit'])
     out['colour'] = np.array([float('%.6f' % x) for x in colour])
+    if cards and all('colors' in c for c in cards):
+        out['atlas'], out['UV'] = color_atlas([c['colors'] for c in cards], out['UV'], out['vcard'])
     os.makedirs(prep_dir, exist_ok=True)
     np.savez(f"{prep_dir}/{file_name('prep', body)}.npz", **out)
     json.dump(info, open(f"{prep_dir}/{file_name('prep', body)}.json", 'w'), indent=1)

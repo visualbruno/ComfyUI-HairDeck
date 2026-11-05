@@ -1,9 +1,10 @@
-"""GLB output of the image pipeline: the cards as one mesh (vectorised card mesher, per-card UVs, hair colour), the
-head proxy and the spring-bone chains as separate meshes of one scene (y up, face toward +z, metres)."""
+"""GLB output of the image pipeline: the cards as one mesh (vectorised card mesher, per-card UVs, the colours along every
+card or one hair colour), the head proxy and the spring-bone chains as separate meshes of one scene (y up, face toward
++z, metres)."""
 import numpy as np
 import trimesh
 
-from ..cards.mesh import card_uv
+from ..cards.mesh import card_uv, card_vertex_colors
 from ..vis.head_proxy import head_proxy
 
 
@@ -87,15 +88,16 @@ def cards_vf(cards):
     return out
 
 
-def hair_trimesh(cards, color_srgb):
+def hair_trimesh(cards, color_srgb, card_srgb=None):
     """All cards as one mesh: hairdeck.cards.mesh.card_mesh_vf's mesh per card (cards_vf; cards with < 3 points skipped
     and degenerate faces dropped, as cards_to_mesh does), per-card UVs (card_uv), a PBR material with the hair colour
     (glTF wants linear colour) and a per-card brightness in COLOR_0 (0.78..1, fixed seed) so neighbouring cards stay
-    visible."""
+    visible. card_srgb: optional per card (B, 3) sRGB colours along it (card_vertex_colors), e.g. those of the colour
+    model; COLOR_0 then carries these colours (linear, times the brightness) and the base colour is white."""
     rng = np.random.default_rng(0)
-    V, F, UV, C = [], [], [], []
+    V, F, UV, C, S = [], [], [], [], []
     off = 0
-    for (seq, sh), vf in zip(cards, cards_vf(cards)):
+    for j, ((seq, sh), vf) in enumerate(zip(cards, cards_vf(cards))):
         if vf is None:
             continue
         v, f = vf
@@ -106,15 +108,20 @@ def hair_trimesh(cards, color_srgb):
         F.append(f + off)
         UV.append(card_uv(seq))
         C.append(np.tile(np.array([k, k, k, 1.0]), (len(v), 1)))
+        if card_srgb is not None:
+            S.append(card_vertex_colors(seq, card_srgb[j]))
         off += len(v)
     if not V:
         return None
+    V, C, base = np.concatenate(V), np.concatenate(C), srgb_to_linear(color_srgb)
+    if card_srgb is not None:
+        C[:, :3] *= srgb_to_linear(np.clip(np.concatenate(S), 0, 1))
+        base = np.ones(3)
     mat = trimesh.visual.material.PBRMaterial(
-        name='hair', baseColorFactor=[*srgb_to_linear(color_srgb).tolist(), 1.0], metallicFactor=0.0,
-        roughnessFactor=0.75, doubleSided=True)
-    m = trimesh.Trimesh(np.concatenate(V), np.concatenate(F), process=False,
+        name='hair', baseColorFactor=[*base.tolist(), 1.0], metallicFactor=0.0, roughnessFactor=0.75, doubleSided=True)
+    m = trimesh.Trimesh(V, np.concatenate(F), process=False,
                         visual=trimesh.visual.TextureVisuals(uv=np.concatenate(UV), material=mat))
-    m.visual.vertex_attributes['color'] = (np.concatenate(C) * 255 + 0.5).astype(np.uint8)
+    m.visual.vertex_attributes['color'] = (C * 255 + 0.5).astype(np.uint8)
     return m
 
 

@@ -4,9 +4,12 @@ ComfyUI nodes for [HairDeck](https://github.com/hyz317/HairDeck), which generate
 spring-bone chains that animate them from a single character image
 ([paper](https://arxiv.org/abs/2610.40599), [project page](https://hyzcluster.github.io/HairDeck)).
 
+HairDeck's color model predicts 16 colors along every card, from root to tip, so highlights, tips and ribbons in the
+image carry over to the hair. With the color model off, the hair gets one color measured from the image.
+
 The nodes save the hair three ways:
 
-- **GLB**: the hair cards as a static mesh with UVs and the hair colour.
+- **GLB**: the hair cards as a static mesh with UVs and the per-card colors.
 - **Rigged GLB**: the hair alone, with an armature and skinning weights, ready to animate or to attach to your own
   character.
 - **VRM**: HairDeck's avatar export. The hair goes on the bundled avatar with VRM spring-bone physics.
@@ -18,8 +21,8 @@ executable also works.
 
 | Node | In | Out |
 | --- | --- | --- |
-| **HairDeck Model Loader** | offload mode, chains on/off, `auto_download` | `HAIRDECK_MODEL` |
-| **HairDeck Generate Hair** | `HAIRDECK_MODEL`, `IMAGE`, optional `MASK`, seed, steps, cfg | `HAIRDECK_HAIR`, `TRIMESH`, preprocessing panel, model crop, info |
+| **HairDeck Model Loader** | offload mode, chains and colors on/off, `auto_download` | `HAIRDECK_MODEL` |
+| **HairDeck Generate Hair** | `HAIRDECK_MODEL`, `IMAGE`, optional `MASK`, seed, steps, cfg, chains and colors on/off | `HAIRDECK_HAIR`, `TRIMESH`, preprocessing panel, model crop, info |
 | **HairDeck Save GLB** | `HAIRDECK_HAIR`, head proxy and chain display toggles | `FILE_3D_GLB`, path |
 | **HairDeck Rigged GLB** | `HAIRDECK_HAIR`, Blender backend | `FILE_3D_GLB`, path, info |
 | **HairDeck Export VRM** | `HAIRDECK_HAIR`, Blender backend | `FILE_3D_GLB` (a preview copy), VRM path, info |
@@ -37,6 +40,7 @@ image in ComfyUI's `input/` folder and select it in **Load Image**.
 | --- | --- | --- |
 | `offload` | on | `on`: the models wait in system RAM and visit the GPU only for their stage, which leaves the GPU to the rest of the workflow. `auto`: HairDeck decides from the free VRAM. `off`: everything stays on the GPU (fastest, about 10 GB). |
 | `load_chains` | on | Loads the chain model. Rigging and VRM need chains. |
+| `load_colors` | on | Loads the color model. Off: one hair color for the whole hairstyle. |
 | `auto_download` | on | Fetches missing weights into `models/hairdeck` (see [Weights](#weights)). |
 | `copy_from_workspace` | – | An existing HairDeck workspace (the folder holding `ckpt/`, `data/`, `third_party/`) to copy missing files from instead of downloading them. |
 | `gated_source` | huggingface | Where SAM 3 and DINOv3 come from: `huggingface` or `modelscope`. Both are checked against the same sha256. |
@@ -49,11 +53,15 @@ image in ComfyUI's `input/` folder and select it in **Load Image**.
 | `steps` | 50 | Euler steps of the image model. |
 | `cfg` | 2.0 | Classifier-free guidance of the image model. |
 | `generate_chains` | on | Generates the spring-bone chains. Some seeds produce no chains; that hair then only follows the head. |
+| `colors` | on | Colors every card with 16 colors from root to tip (needs `load_colors`). Off: one hair color, measured from the image's hair mask. |
 | `filename_prefix` | HairDeck/hair | Result folder under `output/`, such as `output/HairDeck/hair_00001_/`. |
 | `mask` / `invert_mask` | – | Optional foreground mask. HairDeck finds the character by itself (SAM 3 + BiRefNet), so a mask only helps on busy backgrounds. Turn `invert_mask` on for the MASK of the core Load Image node. |
 
-Each run writes HairDeck's usual result folder: the input, the preprocessing panel, `cards_seed<s>.json`,
-`chains_seed<s>.json`, the GLBs and `info.json`. The Rigged GLB and VRM nodes work from that folder.
+Each run writes HairDeck's usual result folder: the input, the preprocessing panel, `cards_seed<s>.json` (with each
+card's `colors`, sRGB 0–1 from root to tip), `chains_seed<s>.json`, the GLBs and `info.json`. The Rigged GLB and VRM
+nodes work from that folder.
+
+With colors, the `TRIMESH` output and the GLBs carry them as vertex colors (`COLOR_0`) on a white base color.
 
 ### Save GLB
 
@@ -72,7 +80,9 @@ The hair alone, rigged:
   …, ending in `HairGen_c00_end`).
 - **Weights:** HairDeck's own skinning. Each vertex is weighted between `Head` and up to two chain bones, and cards
   that no chain drives stay on `Head`.
-- **Material:** the hair colour, double-sided.
+- **Material:** double-sided. With colors, the base color is a small color texture (one 8-pixel column per card,
+  embedded in the GLB) that HairDeck builds for its VRM export, and the mesh UVs point into it. Without colors, the
+  material has the single hair color and the UVs are per card.
 - **Stiffness:** the predicted stiffness of each chain is stored in the armature's glTF extras
   (`hairdeck_stiffness`, with the root bones in `hairdeck_chain_roots`), for a spring or jiggle-bone setup in your
   engine.
@@ -88,7 +98,8 @@ spring bones in your engine.
 This runs HairDeck's VRM 0.x export unchanged:
 
 1. It removes the bundled avatar's own hair.
-2. It adds the generated hair with an MToon material, skinned to new chain bones under the avatar's head bone.
+2. It adds the generated hair with an MToon material, skinned to new chain bones under the avatar's head bone. With
+   colors, the per-card color texture is both the lit and the shade texture.
 3. It writes one VRM spring-bone group per chain, using the predicted stiffness, drag 0.4, no gravity and the
    avatar's colliders. Chain bones that start inside the head stay rigid.
 4. It validates the file with HairDeck's own checks.
@@ -119,7 +130,7 @@ at run time:
 - **Blender 5.2's glTF exporter** returns three values where the add-on expects two, which made every material fail
   to export.
 - **The MToon conversion** never marks the material as MToon in a background run, so the hair was exported as a
-  plain glTF material.
+  plain glTF material and lost its MToon colors and color texture.
 
 The patches are in [blender/bpy_runner.py](blender/bpy_runner.py).
 
@@ -130,7 +141,7 @@ environment variable is set). The files come from HairDeck's own downloader, eac
 
 | Item | Size | Source |
 | --- | --- | --- |
-| HairDeck checkpoints and data | 1.5 GB | [hyz317/HairDeck](https://huggingface.co/hyz317/HairDeck) |
+| HairDeck checkpoints and data (including the color model) | 2.2 GB | [hyz317/HairDeck](https://huggingface.co/hyz317/HairDeck) |
 | SAM 3 | 3.3 GB | [facebook/sam3](https://huggingface.co/facebook/sam3) (gated) |
 | DINOv3 ViT-L/16 | 1.2 GB | [facebook/dinov3-vitl16-pretrain-lvd1689m](https://huggingface.co/facebook/dinov3-vitl16-pretrain-lvd1689m) (gated) |
 | BiRefNet-matting | 0.85 GB | [ZhengPeng7/BiRefNet-matting](https://huggingface.co/ZhengPeng7/BiRefNet-matting) |
@@ -163,7 +174,7 @@ Measured on an RTX 3080 Laptop GPU (16 GB) with Python 3.13, torch 2.10 and CUDA
 | Step | Time |
 | --- | --- |
 | Model Loader (first run) | 15 s |
-| Generate Hair (preprocessing 3.9 s, cards 2.4 s, chains 1.2 s) | 8 s |
+| Generate Hair (preprocessing 4.1 s, cards 1.7 s, colors 1.2 s, chains 1.1 s) | 8 s |
 | Rigged GLB (`bpy`; 7 s through a Blender executable) | 1.5 s |
 | Export VRM (`bpy`) | 20 s |
 

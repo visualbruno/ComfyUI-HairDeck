@@ -120,9 +120,13 @@ class HairDeckModelLoader:
                 "load_chains": ("BOOLEAN", {
                     "default": True,
                     "tooltip": "Load the chain DiT, which generates the spring bones. Needed for rigging and VRM."}),
+                "load_colors": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "Load the colour model, which predicts 16 colours along every card. Off: one hair "
+                               "colour, measured from the image's hair mask."}),
                 "auto_download": ("BOOLEAN", {
                     "default": True,
-                    "tooltip": "Fetch missing weights (~7 GB) into models/hairdeck. SAM 3 and DINOv3 are gated on "
+                    "tooltip": "Fetch missing weights (~8 GB) into models/hairdeck. SAM 3 and DINOv3 are gated on "
                                "Hugging Face: accept their licences and log in first."}),
             },
             "optional": {
@@ -140,12 +144,14 @@ class HairDeckModelLoader:
     RETURN_NAMES = ("model",)
     FUNCTION = "load"
     CATEGORY = CATEGORY
-    DESCRIPTION = "Loads the HairDeck pipeline: SAM 3 + BiRefNet preprocessing, DINOv3, the image DiT and the chain DiT."
+    DESCRIPTION = ("Loads the HairDeck pipeline: SAM 3 + BiRefNet preprocessing, DINOv3, the image DiT, the colour model "
+                   "and the chain DiT.")
 
-    def load(self, offload, load_chains, auto_download, copy_from_workspace="", gated_source="huggingface"):
+    def load(self, offload, load_chains, load_colors, auto_download, copy_from_workspace="",
+             gated_source="huggingface"):
         H.ensure_weights(auto_download, copy_from_workspace.strip().strip('"'), gated_source)
         device = mm.get_torch_device()
-        key = (offload, bool(load_chains), str(device), str(H.workspace()))
+        key = (offload, bool(load_chains), bool(load_colors), str(device), str(H.workspace()))
         if _PIPELINE["key"] != key:
             _PIPELINE.update(key=None, pipe=None)
             mm.unload_all_models()
@@ -153,12 +159,14 @@ class HairDeckModelLoader:
             from hairdeck.infer.image import Pipeline
 
             with torch.inference_mode(False), H.own_modules():
-                pipe = Pipeline(device=device, chains=bool(load_chains), offload=offload)
+                pipe = Pipeline(device=device, chains=bool(load_chains), colors=bool(load_colors), offload=offload)
             log.info(f"[HairDeck] pipeline loaded in {pipe.load_sec} s from {H.workspace()}")
             _PIPELINE.update(key=key, pipe=pipe)
         pipe = _PIPELINE["pipe"]
         if load_chains and pipe.chain is None:
             log.warning(f"[HairDeck] the chain DiT did not load, chains are off: {pipe.chain_error}")
+        if load_colors and pipe.color is None:
+            log.warning(f"[HairDeck] the colour model did not load, one hair colour: {pipe.color_error}")
         return (pipe,)
 
 
@@ -177,6 +185,9 @@ class HairDeckGenerate:
                                   "tooltip": "Classifier-free guidance of the image DiT."}),
                 "generate_chains": ("BOOLEAN", {"default": True,
                                                 "tooltip": "Generate the spring-bone chains (needs load_chains)."}),
+                "colors": ("BOOLEAN", {"default": True,
+                                       "tooltip": "Colour every card with 16 colours from root to tip (needs "
+                                                  "load_colors). Off: one hair colour."}),
                 "filename_prefix": ("STRING", {"default": "HairDeck/hair",
                                                "tooltip": "Result folder under output/: <prefix>_00001_/."}),
             },
@@ -192,40 +203,51 @@ class HairDeckGenerate:
     RETURN_TYPES = ("HAIRDECK_HAIR", "TRIMESH", "IMAGE", "IMAGE", "STRING")
     RETURN_NAMES = ("hair", "mesh", "preprocess", "model_input", "info")
     OUTPUT_TOOLTIPS = (
-        "The generated hairstyle (cards, chains, colour and its result folder) for the save, rig and VRM nodes.",
-        "The hair cards as one trimesh with UVs and the hair colour, in HairDeck's head frame (Y up, metres).",
+        "The generated hairstyle (cards, chains, colours and its result folder) for the save, rig and VRM nodes.",
+        "The hair cards as one trimesh with UVs, in HairDeck's head frame (Y up, metres): the colour model's colours "
+        "as vertex colours on a white material, or one hair colour.",
         "HairDeck's preprocessing panel: masks and the head crop box.",
         "The head crop the model saw.",
         "Counts, timings and the result folder.",
     )
     FUNCTION = "generate"
     CATEGORY = CATEGORY
-    DESCRIPTION = "Generates hair cards and spring-bone chains from one character image."
+    DESCRIPTION = "Generates hair cards, their colours and spring-bone chains from one character image."
 
-    def generate(self, model, image, seed, steps, cfg, generate_chains, filename_prefix, mask=None,
+    def generate(self, model, image, seed, steps, cfg, generate_chains, colors, filename_prefix, mask=None,
                  invert_mask=False):
         from hairdeck.infer.glb import hair_trimesh
 
         if generate_chains and model.chain is None:
             log.warning("[HairDeck] generate_chains is on but the model was loaded without chains")
+        if colors and model.color is None:
+            log.warning("[HairDeck] colors is on but the model was loaded without the colour model")
         array = _image_to_array(image, mask, invert_mask)
         out_dir = _new_output_dir(filename_prefix)
         with torch.inference_mode(False), H.own_modules():
             res = model.run(array, seed=int(seed), steps=int(steps), cfg=float(cfg), n_samples=1, out_dir=out_dir,
-                            chains=bool(generate_chains))
+                            chains=bool(generate_chains), colors=bool(colors))
         if not res["ok"]:
             raise RuntimeError(f"[HairDeck] {res['message']}")
         smp = res["samples"][0]
+        card_srgb = None
+        if smp.get("colors"):  # the run keeps only the flag; the colours are in the cards file it wrote
+            with open(smp["json"], encoding="utf-8") as f:
+                card_srgb = [c["colors"] for c in json.load(f)]
         hair = dict(out_dir=out_dir, seed=int(seed), hair_color=[float(c) for c in res["hair_color"]],
-                    cards=smp["cards"], chains=smp["chains"] or [], n_cards=smp["n_cards"],
+                    cards=smp["cards"], card_srgb=card_srgb, chains=smp["chains"] or [], n_cards=smp["n_cards"],
                     n_chains=smp["n_chains"] or 0)
-        mesh = hair_trimesh(smp["cards"], res["hair_color"])
+        mesh = hair_trimesh(smp["cards"], res["hair_color"], card_srgb=card_srgb)
         info = (f"{smp['n_cards']} cards, {hair['n_chains']} chains (seed {seed})\n"
-                f"hair colour (sRGB): {', '.join('%.3f' % c for c in res['hair_color'])}\n"
+                f"colours: {'16 per card (colour model)' if card_srgb else 'one hair colour'}; hair colour (sRGB): "
+                f"{', '.join('%.3f' % c for c in res['hair_color'])}\n"
                 f"timings: {json.dumps(res['timings'])}\n"
                 f"folder: {out_dir}")
         if res["message"]:
             info += "\n" + res["message"]
+        for note in res["notes"]:
+            if note.startswith(("colours failed", "one hair colour", "chains failed")):
+                info += "\n" + note
         return (hair, mesh, _pil_to_tensor(res["prep_vis"]), _pil_to_tensor(res["model_input"]), info)
 
 
@@ -256,7 +278,7 @@ class HairDeckSaveGLB:
 
         path, rel, preview = _output_file(filename_prefix, "glb")
         chains = chain_trimesh(hair["chains"]) if show_chains and hair["chains"] else None
-        write_glb(path, hair_trimesh(hair["cards"], hair["hair_color"]),
+        write_glb(path, hair_trimesh(hair["cards"], hair["hair_color"], card_srgb=hair.get("card_srgb")),
                   head_trimesh() if include_head_proxy else None, chains)
         return {"ui": {"3d": [preview]}, "result": (_file3d(path), rel)}
 
@@ -287,8 +309,9 @@ class HairDeckRiggedGLB:
     CATEGORY = CATEGORY
     OUTPUT_NODE = True
     DESCRIPTION = ("Rigged GLB of the hair alone: a Head bone plus one bone chain per spring-bone chain, the hair "
-                   "skinned with HairDeck's weights. No physics: the chain stiffness is stored in the armature's "
-                   "extras. Placed where the bundled avatar's head is (about 1.4 m up).")
+                   "skinned with HairDeck's weights, coloured by a per-card colour texture (or one hair colour). No "
+                   "physics: the chain stiffness is stored in the armature's extras. Placed where the bundled avatar's "
+                   "head is (about 1.4 m up).")
 
     def rig(self, hair, filename_prefix, blender, blender_path=""):
         from hairdeck.infer.glb import srgb_to_linear
@@ -312,7 +335,7 @@ class HairDeckRiggedGLB:
         if res is None or not os.path.isfile(path):
             raise RuntimeError(f"[HairDeck] Blender did not write {path}; see {log_path}")
         info = (f"{res['n_chains']} chains, {res['n_bones']} bones, {res['n_groups']} vertex groups, "
-                f"{res['n_verts']} vertices\nBlender: {' '.join(cmd)}")
+                f"{res['n_verts']} vertices\ncolours: {res['colors']}\nBlender: {' '.join(cmd)}")
         return {"ui": {"3d": [preview]}, "result": (_file3d(path), rel, info)}
 
 

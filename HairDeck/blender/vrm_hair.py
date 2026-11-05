@@ -9,7 +9,8 @@ vrm_export.py (one Blender run per export) and vrm_worker.py (resident worker).
      'hair' in the name), deleted only if no remaining mesh, spring group, collider group or object uses anything in
      their subtree; every other spring group and all collider groups are kept as they are; blend-shape binds and
      first-person annotations of the removed meshes are removed;
-  add_generated_hair: the generated hair mesh (single-colour MToon, double sided, per-card UVs) skinned to the head bone
+  add_generated_hair: the generated hair mesh (MToon in the hair colour or the per-card colour atlas, double sided,
+     per-card UVs) skinned to the head bone
      (humanoid 'head') and to the new chain bones: chain c gets bones HairGen_cCC_KK from joint k to joint k+1, the
      first parented to the head bone, plus a leaf HairGen_cCC_end at the last joint (VRoid style '_end' node, so the last
      joint is an explicit node and the last segment keeps its length in UniVRM / three-vrm); weights from
@@ -231,14 +232,28 @@ def add_generated_hair(arm, P, col_uuids, center, colour, info):
         if w[i] < 1:
             vg_head.add([i], float(1 - w[i]), 'REPLACE')
         n3 += two and w[i] < 1
-    # material: single-colour MToon, double sided
+    # material: MToon, double sided; one colour, or the per-card colours (P['atlas'], hairdeck.vrm.prep.color_atlas: the
+    # UVs are already in the atlas) as the lit and the shade texture
     mat = bpy.data.materials.new('Hair_gen_MToon')
     mat.use_nodes = True
     obj.data.materials.append(mat)
     bpy.ops.vrm.convert_material_to_mtoon1(material_name=mat.name)
     mt = mat.vrm_addon_extension.mtoon1
-    mt.pbr_metallic_roughness.base_color_factor = (*colour, 1.0)
-    mt.extensions.vrmc_materials_mtoon.shade_color_factor = tuple(0.6 * c for c in colour)
+    if 'atlas' in P:
+        A = np.asarray(P['atlas'], np.float32) / 255
+        img = bpy.data.images.new('Hair_gen_colors', A.shape[1], A.shape[0], alpha=False)
+        img.colorspace_settings.name = 'sRGB'
+        img.pixels.foreach_set(np.concatenate([A[::-1], np.ones(A.shape[:2] + (1,), np.float32)], -1).reshape(-1))
+        img.file_format = 'PNG'
+        img.pack()
+        mt.pbr_metallic_roughness.base_color_factor = (1.0, 1.0, 1.0, 1.0)
+        mt.pbr_metallic_roughness.base_color_texture.index.source = img
+        mt.extensions.vrmc_materials_mtoon.shade_color_factor = (0.6, 0.6, 0.6)
+        mt.extensions.vrmc_materials_mtoon.shade_multiply_texture.index.source = img
+        info['hair_colours'] = f'per card, atlas {A.shape[1]}x{A.shape[0]}'
+    else:
+        mt.pbr_metallic_roughness.base_color_factor = (*colour, 1.0)
+        mt.extensions.vrmc_materials_mtoon.shade_color_factor = tuple(0.6 * c for c in colour)
     mt.double_sided = True
     # spring-bone groups. Walking from the chain root, the leading run of joints that lie inside a collider sphere of the
     # chain's collider groups at rest (distance < radius + hit radius; typically the scalp part inside the head

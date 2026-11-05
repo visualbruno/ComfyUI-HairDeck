@@ -5,6 +5,7 @@ cards_seed{s}.json and chains_seed{s}.json, head frame) -> out_dir/<file_tag>_se
 and chains on the body (hairdeck.vrm.body; default data/avatar/body.json) with the body's own hair removed:
   1. hairdeck.vrm.prep (in this process): cards and chain joints into the body's dataset frame (p = (p_head - b) / k,
      width and thickness / k), mesh, UVs and skinning in the Blender world of the body; hair colour sRGB -> linear;
+     cards with colours (cards_seed{s}.json 'colors') get them as a texture (hairdeck.vrm.prep.color_atlas) instead;
   2. Blender 4.2 with the VRM Add-on for Blender: blender/vrm_export.py (one Blender run), or the resident worker
      blender/vrm_worker.py when one runs for the body (start_worker()): removal of the body's hair, the new hair mesh,
      chain bones and VRM 0.x spring-bone groups (secondaryAnimation), export;
@@ -14,7 +15,8 @@ frame), prep/ (the prep npz and json), the gen VRM, the export json (what the Bl
 the add-on's unchanged re-export of the body, made by the worker; the reference of the round-trip checks), check.json,
 rest.png, vrm_info.json (the returned dict) and the logs of the steps.
 turn_preview(out_dir, seed, colour_srgb, show_chains=False, body=None): hairdeck.vis.turn_preview in a subprocess ->
-out_dir/turn_seed{s}.mp4 (turn_seed{s}_chains.mp4 with the chain joints drawn) and its json.
+out_dir/turn_seed{s}.mp4 (turn_seed{s}_chains.mp4 with the chain joints drawn) and its json; in the cards' colours
+where the cards file has them.
 
 Environment:
   HAIRDECK_BLENDER     Blender executable or command override; otherwise the managed platform-specific installation

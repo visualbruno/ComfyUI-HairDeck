@@ -61,6 +61,7 @@ def missing_items() -> list[str]:
     """Inference items whose files are not all present (a presence check, not the downloader's sha256 pass)."""
     workspace()
     from hairdeck import paths
+    from hairdeck.infer.image import CHAIN_DIT, COLOR_DIT, IMAGE_DIT
 
     root = Path(paths.get("root"))
     out = []
@@ -70,7 +71,11 @@ def missing_items() -> list[str]:
         test = cfg.get("data", {}).get("test_data", {}).get("files", [])
         rels = [r for r in files if not any(r == e or (e.endswith("/") and r.startswith(e)) for e in test)]
         dl = _downloader()
-        if not all(os.path.isfile(dl.dst_of(r)) for r in rels):
+        # A MANIFEST from an older release does not list newer checkpoints (the colour model came after the first
+        # release), so the checkpoints the vendored pipeline loads are required by name as well; the downloader then
+        # fetches the current MANIFEST and what is missing from it.
+        ckpts = [paths.ckpt(*c) for c in (IMAGE_DIT, CHAIN_DIT, COLOR_DIT)]
+        if not all(os.path.isfile(dl.dst_of(r)) for r in rels) or not all(os.path.isfile(c) for c in ckpts):
             out.append("hairdeck")
     except (OSError, ValueError, KeyError):
         out.append("hairdeck")

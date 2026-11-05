@@ -1,10 +1,10 @@
 """Download everything inference and the demo need (the default items) and, with --only, the files of the test-set
 evaluation into the workspace root (hairdeck.paths), each file checked against its sha256 where the source is fixed:
 
-  hairdeck    our checkpoints and data files (image model, card VAE, chain model, point-cloud model as safetensors,
-              token statistics, the canonical head, the avatar body) from the Hugging Face model repository --repo:
-              config.json first, then every file of its MANIFEST.json against its sha256, but those of the test_data
-              entry of config.json
+  hairdeck    our checkpoints and data files (image model, colour model, card VAE, chain model, point-cloud model as
+              safetensors, token statistics, the canonical head, the avatar body) from the Hugging Face model repository
+              --repo: config.json first, then every file of its MANIFEST.json against its sha256, but those of the
+              test_data entry of config.json
   birefnet    BiRefNet-matting (MIT), Hugging Face ZhengPeng7/BiRefNet-matting at a fixed revision: the weights and the
               repository's model code -> weights/birefnet_matting/
   sam3        SAM 3 (SAM License), Hugging Face facebook/sam3 sam3.pt -> weights/sam3/; a gated repository: accept the

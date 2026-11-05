@@ -98,6 +98,23 @@
     "params_million": 182.3,
     "trained": "ckpt/image_model/ema_100000.pt"
   },
+  "color_dit": {
+    "checkpoint": "ckpt/color_model/model.safetensors",
+    "about": "the colour model: the image model's network fine-tuned to predict 16 CIELAB colours along every generated card from the 448 px crop and the person matte; trained on renders of the training hairstyles with the colours of their VRM materials, starting from the image model",
+    "args": {
+      "dim": 768,
+      "depth": 12,
+      "heads": 12,
+      "res": 448,
+      "dino": "vitl16",
+      "vae": "card_vae",
+      "bins": 16,
+      "mask": "person"
+    },
+    "sampling": "scripts/image_to_hair.py IMAGE --out OUT  (hairdeck.infer.image.Pipeline: one pass on the clean card tokens of every variation)",
+    "params_million": 183.5,
+    "trained": "ckpt/color_model/ema_040000.pt"
+  },
   "inference_data": {
     "files": [
       "data/token_stats.json",

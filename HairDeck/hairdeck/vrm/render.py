@@ -1,11 +1,13 @@
 """Rest-pose renders of VRM 0.x files with the skin applied (pyrender; desktop OpenGL, EGL or OSMesa): every mesh node's
 vertices go through its skin at rest (sum over influences of weight x joint global matrix x inverse bind matrix;
 unskinned meshes use the node's global matrix), so what is drawn is what a VRM viewer shows in the rest pose. Generated
-hair (mesh Hair_gen) in its material colour, other hair (meshes named like 'hair') in orange, everything else light grey.
+hair (mesh Hair_gen) in its material colour (with a base colour texture: the texture at the vertex UVs), other hair
+(meshes named like 'hair') in orange, everything else light grey.
 One row per file: whole body from the front, then the head from the front, the side and the back.
 
 PYOPENGL_PLATFORM=egl|osmesa python -m hairdeck.vrm.render OUT.png VRM [VRM ...]
 """
+import io
 import json
 import os
 import sys
@@ -32,8 +34,22 @@ def linear_to_srgb(c):
     return np.where(c <= 0.0031308, 12.92 * c, 1.055 * c ** (1 / 2.4) - 0.055)
 
 
+def texture_at(J, B, tex, uv):
+    """sRGB 0..1 colours (N, 3) of the glTF texture `tex` (index) at the UVs (N, 2; glTF: v down), bilinear, clamped"""
+    bv = J['bufferViews'][J['images'][J['textures'][tex]['source']]['bufferView']]
+    o = bv.get('byteOffset', 0)
+    im = np.asarray(Image.open(io.BytesIO(B[o:o + bv['byteLength']])).convert('RGB'), np.float64) / 255
+    h, w = im.shape[:2]
+    x, y = np.clip(uv[:, 0] * w - 0.5, 0, w - 1), np.clip(uv[:, 1] * h - 0.5, 0, h - 1)
+    x0, y0 = np.minimum(x.astype(int), w - 2 if w > 1 else 0), np.minimum(y.astype(int), h - 2 if h > 1 else 0)
+    x1, y1 = np.minimum(x0 + 1, w - 1), np.minimum(y0 + 1, h - 1)
+    fx, fy = (x - x0)[:, None], (y - y0)[:, None]
+    return ((1 - fy) * ((1 - fx) * im[y0, x0] + fx * im[y0, x1]) + fy * ((1 - fx) * im[y1, x0] + fx * im[y1, x1]))
+
+
 def skinned_meshes(path):
-    """Rest-pose meshes of a VRM (dicts name, V, F, colour = base colour factor) and the head bone position (glTF)."""
+    """Rest-pose meshes of a VRM (dicts name, V, F, colour = base colour factor, vcol = the base colour texture at the
+    vertices (sRGB) or None) and the head bone position (glTF)."""
     J, B = VS.load_glb(path)
     G, _ = VS.global_mats(J)
     out = []
@@ -56,8 +72,13 @@ def skinned_meshes(path):
             else:
                 X = (ph @ G[ni].T)[:, :3]
             mat = J['materials'][pr['material']] if 'material' in pr else {}
-            col = mat.get('pbrMetallicRoughness', {}).get('baseColorFactor', [0.8, 0.8, 0.8, 1])[:3]
-            out.append(dict(name=m.get('name', ''), V=X, F=f, colour=col))
+            pbr = mat.get('pbrMetallicRoughness', {})
+            col = pbr.get('baseColorFactor', [0.8, 0.8, 0.8, 1])[:3]
+            vcol = None
+            if 'baseColorTexture' in pbr and 'TEXCOORD_0' in pr['attributes']:
+                vcol = texture_at(J, B, pbr['baseColorTexture']['index'],
+                                  VS.accessor(J, B, pr['attributes']['TEXCOORD_0']).astype(np.float64))
+            out.append(dict(name=m.get('name', ''), V=X, F=f, colour=col, vcol=vcol))
     hb = {h['bone']: h['node'] for h in J['extensions']['VRM']['humanoid']['humanBones']}
     return out, G[hb['head']][:3, 3]
 
@@ -86,9 +107,20 @@ def render(meshes, target, direction, half, size=360):
     pyrender = _pyrender()
     s = pyrender.Scene(bg_color=[0, 0, 0, 0], ambient_light=[0.3] * 3)
     for m in meshes:
+        mat = pyrender.MetallicRoughnessMaterial(baseColorFactor=[*colour_of(m), 1.0], metallicFactor=0.0,
+                                                 roughnessFactor=0.85, doubleSided=True)
+        if m.get('vcol') is not None and m['name'] == 'Hair_gen':  # the texture colours, taken as the factor is
+            tri = m['V'][m['F']]
+            n = np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0])
+            n /= np.linalg.norm(n, axis=1, keepdims=True) + 1e-20
+            c = np.concatenate([m['vcol'][m['F']].reshape(-1, 3) * colour_of(m), np.ones((m['F'].size, 1))], 1)
+            mat.baseColorFactor = np.ones(4)
+            s.add(pyrender.Mesh([pyrender.Primitive(positions=tri.reshape(-1, 3).astype(np.float32),
+                                                    normals=np.repeat(n, 3, 0).astype(np.float32),
+                                                    color_0=c.astype(np.float32), material=mat)]))
+            continue
         tm = trimesh.Trimesh(m['V'], m['F'], process=False)
-        s.add(pyrender.Mesh.from_trimesh(tm, material=pyrender.MetallicRoughnessMaterial(
-            baseColorFactor=[*colour_of(m), 1.0], metallicFactor=0.0, roughnessFactor=0.85, doubleSided=True), smooth=False))
+        s.add(pyrender.Mesh.from_trimesh(tm, material=mat, smooth=False))
     d = np.asarray(direction, np.float64)
     d /= np.linalg.norm(d)
     eye = target + d * 6 * half
