@@ -25,7 +25,8 @@ executable also works.
 | **HairDeck Generate Hair** | `HAIRDECK_MODEL`, `IMAGE`, optional `MASK`, seed, steps, cfg, chains and colors on/off | `HAIRDECK_HAIR`, `TRIMESH`, preprocessing panel, model crop, info |
 | **HairDeck Save GLB** | `HAIRDECK_HAIR`, head proxy and chain display toggles | `FILE_3D_GLB`, path |
 | **HairDeck Rigged GLB** | `HAIRDECK_HAIR`, Blender backend | `FILE_3D_GLB`, path, info |
-| **HairDeck Export VRM** | `HAIRDECK_HAIR`, Blender backend | `FILE_3D_GLB` (a preview copy), VRM path, info |
+| **HairDeck Export VRM** | `HAIRDECK_HAIR`, Blender backend, optional `HAIRDECK_AVATAR` | `FILE_3D_GLB` (a preview copy), VRM path, info |
+| **HairDeck Load Avatar** | a `.vrm` file from `input/` or any path, head collider toggle, Blender backend | `HAIRDECK_AVATAR`, info |
 
 The `TRIMESH` output is a `trimesh.Trimesh`, the same socket as ComfyUI-Hunyuan3DWrapper and ComfyUI-Hi3D, so the
 hair can go straight into their remesh, UV and export nodes. The three save nodes show their result in the node, and
@@ -91,8 +92,9 @@ The hair alone, rigged:
   (`hairdeck_stiffness`, with the root bones in `hairdeck_chain_roots`), for a spring or jiggle-bone setup in your
   engine.
 
-The hair is placed where the bundled avatar's head is, about 1.4 m up. To use it on your own character, parent the
-`Head` bone to your character's head bone.
+The hair is placed and sized for an avatar's head: by default HairDeck's bundled avatar (about 1.4 m up), or your own
+avatar when a **Load Avatar** node is connected to the optional `avatar` input. To use it on your character, parent
+the `Head` bone to your character's head bone.
 
 A GLB has no standard way to store spring physics, so the hair doesn't move on its own. Animate the bones, or add
 spring bones in your engine.
@@ -110,6 +112,43 @@ This runs HairDeck's VRM 0.x export unchanged:
 
 The VRM file contains no animation. The physics runs in VRM players and tools: UniVRM in Unity, three-vrm, VSeeFace,
 warudo, VRoid Hub. Blender's VRM Add-on doesn't simulate VRM 0.x spring bones.
+
+By default the hair goes on HairDeck's bundled avatar, a VRoid Studio template avatar that the HairDeck authors ship
+with their model weights. Exported files then carry its metadata: title "HairDeck avatar", author hyz317, Apache-2.0.
+Connect a **Load Avatar** node to use your own avatar instead.
+
+### Load Avatar
+
+Prepares your own avatar for Export VRM and Rigged GLB. Put the `.vrm` file in ComfyUI's `input/` folder and select
+it, or give its full path in `vrm_path`.
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `vrm` | – | A VRM 0.x avatar from `input/`. |
+| `vrm_path` | – | The full path of a `.vrm` file anywhere on disk. When set, it's used instead of `vrm`. Surrounding quotes (as Windows' "Copy as path" adds), `~` and environment variables such as `%USERPROFILE%` are accepted. |
+| `add_head_collider` | on | When the avatar has no colliders, adds a sphere collider on its head bone, fitted to the cranium. Without colliders, the new hair's spring bones would swing through the head. |
+| `blender` / `blender_path` | auto | The Blender used for the one-time preparation, as on Export VRM. |
+
+What the node does:
+
+1. Finds the avatar's hair meshes ("hair" in the name), which Export VRM replaces with the generated hair.
+2. Measures the head on a mesh with "face" in the name (VRoid) or, failing that, "head".
+3. Reads the humanoid head bone.
+4. Fits HairDeck's head frame to that head, the same way HairDeck fits its bundled avatar.
+
+This takes about 15 s, once per file. The result is cached in `models/hairdeck/avatars/` and reused until the file
+changes. The exported VRM keeps your avatar's own metadata (author, license).
+
+What the avatar needs:
+
+- **VRM 0.x.** HairDeck reads the VRM 0.x skeleton and writes VRM 0.x spring bones. VRM 1.0 files are refused with a
+  message; VRoid Studio can export 0.x.
+- **Separate hair meshes** with "hair" in the name. Hair baked into the body mesh can't be removed.
+- **A face or head mesh** with "face" or "head" in the name.
+
+The hair is sized to the avatar's face width. HairDeck was trained on anime heads, so on heads with other proportions
+the hair may not cover the scalp completely. For example, on a realistic head that is longer front to back, a little
+scalp may show above the ears.
 
 ## Blender: `bpy` or an executable
 

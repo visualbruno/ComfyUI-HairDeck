@@ -300,6 +300,8 @@ class HairDeckRiggedGLB:
             },
             "optional": {
                 "blender_path": ("STRING", {"default": "", "tooltip": "blender.exe for the executable backend."}),
+                "avatar": ("HAIRDECK_AVATAR", {"tooltip": "Place and size the hair for this avatar's head (HairDeck "
+                                                          "Load Avatar). Without it: HairDeck's bundled avatar."}),
             },
         }
 
@@ -312,16 +314,16 @@ class HairDeckRiggedGLB:
     OUTPUT_NODE = True
     DESCRIPTION = ("Rigged GLB of the hair alone: a Head bone plus one bone chain per spring-bone chain, the hair "
                    "skinned with HairDeck's weights, coloured by a per-card colour texture (or one hair colour). No "
-                   "physics: the chain stiffness is stored in the armature's extras. Placed where the bundled avatar's "
-                   "head is (about 1.4 m up).")
+                   "physics: the chain stiffness is stored in the armature's extras. Placed and sized for the avatar's "
+                   "head: a loaded avatar, or HairDeck's bundled one (about 1.4 m up).")
 
-    def rig(self, hair, filename_prefix, blender, blender_path=""):
+    def rig(self, hair, filename_prefix, blender, blender_path="", avatar=None):
         from hairdeck.infer.glb import srgb_to_linear
         from hairdeck.vrm import body as B
         from hairdeck.vrm.prep import prepare
 
         out_dir, seed = hair["out_dir"], hair["seed"]
-        bd = B.body()
+        bd = B.body(avatar["body"] if avatar else None)
         d = os.path.join(out_dir, f"rig_seed{seed}")
         prepare(out_dir, seed, bd, srgb_to_linear(hair["hair_color"]), os.path.join(d, "run"),
                 os.path.join(d, "prep"), os.path.join(d, "prep.log"))
@@ -337,7 +339,7 @@ class HairDeckRiggedGLB:
         if res is None or not os.path.isfile(path):
             raise RuntimeError(f"[HairDeck] Blender did not write {path}; see {log_path}")
         info = (f"{res['n_chains']} chains, {res['n_bones']} bones, {res['n_groups']} vertex groups, "
-                f"{res['n_verts']} vertices\ncolours: {res['colors']}\nBlender: {' '.join(cmd)}")
+                f"{res['n_verts']} vertices\ncolours: {res['colors']}\navatar: {bd['key']}\nBlender: {' '.join(cmd)}")
         return {"ui": {"3d": [preview]}, "result": (_file3d(path), rel, info)}
 
 
@@ -357,6 +359,8 @@ class HairDeckExportVRM:
             },
             "optional": {
                 "blender_path": ("STRING", {"default": "", "tooltip": "blender.exe for the executable backend."}),
+                "avatar": ("HAIRDECK_AVATAR", {"tooltip": "Put the hair on this avatar (HairDeck Load Avatar). "
+                                                          "Without it: HairDeck's bundled avatar."}),
             },
         }
 
@@ -368,11 +372,12 @@ class HairDeckExportVRM:
     FUNCTION = "export"
     CATEGORY = CATEGORY
     OUTPUT_NODE = True
-    DESCRIPTION = ("HairDeck's VRM 0.x export: the hair on the bundled avatar (its own hair removed), skinned to new "
-                   "chain bones, with one VRM spring-bone group per chain (the predicted stiffness, the avatar's "
-                   "colliders). The physics runs in VRM players (UniVRM, three-vrm, VSeeFace, VRoid Hub).")
+    DESCRIPTION = ("HairDeck's VRM 0.x export: the hair on an avatar (HairDeck's bundled one, or a loaded one; its own "
+                   "hair removed), skinned to new chain bones, with one VRM spring-bone group per chain (the predicted "
+                   "stiffness, the avatar's colliders). The physics runs in VRM players (UniVRM, three-vrm, VSeeFace, "
+                   "VRoid Hub).")
 
-    def export(self, hair, filename_prefix, blender, blender_path=""):
+    def export(self, hair, filename_prefix, blender, blender_path="", avatar=None):
         from hairdeck.vrm import export as X
 
         cmd, uses_bpy = H.blender_cmd(blender, blender_path)
@@ -385,8 +390,9 @@ class HairDeckExportVRM:
         override = dict(H.blender_user_env(), HAIRDECK_BLENDER=json.dumps(blender_argv),
                         HAIRDECK_VRM_ADDON=H.VRM_ADDON_MODULE,
                         HAIRDECK_VRM_WORK=os.path.join(folder_paths.get_temp_directory(), "hairdeck_vrm"))
+        body = avatar["body"] if avatar else None
         with H.environ(**override):
-            info = X.export_vrm(hair["out_dir"], hair["seed"], hair["hair_color"], render=False)
+            info = X.export_vrm(hair["out_dir"], hair["seed"], hair["hair_color"], body=body, render=False)
         path, rel, _ = _output_file(filename_prefix, "vrm")
         shutil.copyfile(info["vrm"], path)
         # Preview 3D reads .glb; a VRM is a glTF binary with VRM extensions, so a copy under that name previews.
@@ -395,9 +401,81 @@ class HairDeckExportVRM:
         shutil.copyfile(info["vrm"], preview_path)
         text = (f"{'valid' if info['ok'] else 'PROBLEMS: ' + '; '.join(map(str, info['problems']))}\n"
                 f"{info['n_chains']} chains, {info['n_spring_groups']} spring-bone groups, {info['hair_verts']} hair "
-                f"vertices, {info['size_mb']} MB\nBlender: {' '.join(cmd)}")
+                f"vertices, {info['size_mb']} MB\navatar: {avatar['name'] if avatar else 'HairDeck avatar'}, "
+                f"its hair removed: {', '.join(n for n, _, _ in info['removed_hair'] or []) or 'none'}\n"
+                f"Blender: {' '.join(cmd)}")
         preview = {"filename": preview_name, "subfolder": "", "type": "temp"}
         return {"ui": {"3d": [preview]}, "result": (_file3d(preview_path), rel, text)}
+
+
+def _input_vrms():
+    root = folder_paths.get_input_directory()
+    found = []
+    for d, _, files in os.walk(root):
+        found += [os.path.relpath(os.path.join(d, f), root).replace("\\", "/") for f in files if f.lower().endswith(".vrm")]
+    return sorted(found)
+
+
+class HairDeckLoadAvatar:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "vrm": (_input_vrms() or [""], {"tooltip": "A VRM 0.x avatar in ComfyUI's input folder."}),
+                "add_head_collider": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "When the avatar has no colliders, add a sphere collider on its head bone, so the new "
+                               "hair's spring bones don't swing through the head."}),
+                "blender": (BLENDER_BACKENDS, {"default": "auto",
+                                               "tooltip": "Blender for the one-time preparation, as on Export VRM."}),
+            },
+            "optional": {
+                "blender_path": ("STRING", {"default": "", "tooltip": "blender.exe for the executable backend."}),
+                "vrm_path": ("STRING", {"default": "",
+                                        "tooltip": "Full path of a .vrm file anywhere on disk (quotes allowed). When "
+                                                   "set, it is used instead of the vrm list."}),
+            },
+        }
+
+    RETURN_TYPES = ("HAIRDECK_AVATAR", "STRING")
+    RETURN_NAMES = ("avatar", "info")
+    OUTPUT_TOOLTIPS = ("The avatar for Export VRM and Rigged GLB.", "What was found in the avatar.")
+    FUNCTION = "load"
+    CATEGORY = CATEGORY
+    DESCRIPTION = ("Prepares your own VRM 0.x avatar for Export VRM and Rigged GLB, in place of HairDeck's bundled "
+                   "avatar: a file from ComfyUI's input folder, or any file through vrm_path. Its hair meshes ('hair' "
+                   "in the name) are replaced, and its head is measured from a mesh with 'face' or 'head' in the "
+                   "name. Done once per file, cached in models/hairdeck/avatars.")
+
+    @staticmethod
+    def _path(vrm, vrm_path=""):
+        """vrm_path when set (surrounding quotes, ~ and environment variables allowed), else the input-folder file."""
+        p = (vrm_path or "").strip().strip('"').strip("'")
+        if p:
+            return os.path.abspath(os.path.expandvars(os.path.expanduser(p)))
+        return folder_paths.get_annotated_filepath(vrm) if vrm else ""
+
+    @classmethod
+    def IS_CHANGED(cls, vrm, vrm_path="", **kwargs):
+        path = cls._path(vrm, vrm_path)
+        return f"{path}|{os.path.getmtime(path)}" if path and os.path.isfile(path) else path
+
+    def load(self, vrm, add_head_collider, blender, blender_path="", vrm_path=""):
+        from .avatar import build_avatar
+
+        path = self._path(vrm, vrm_path)
+        if vrm_path and vrm_path.strip() and not os.path.isfile(path):
+            raise FileNotFoundError(f"[HairDeck] vrm_path: no such file: {path}")
+        if not path or not os.path.isfile(path):
+            raise FileNotFoundError("[HairDeck] select a .vrm file from ComfyUI's input folder, or set vrm_path")
+        a = build_avatar(path, blender, blender_path, bool(add_head_collider))
+        s = a["info"]
+        collider = s["head_collider_added"]
+        info = (f"{a['name']}: hair meshes {', '.join(s['hair_meshes'])} (replaced), head measured on "
+                f"{', '.join(s['head_meshes'])} ({s['head_width_m']} m wide)\n"
+                f"spring groups {s['spring_groups']}, collider groups {s['collider_groups']}"
+                + (f"; head collider added (radius {collider['radius']:.3f} m)" if collider else ""))
+        return (a, info)
 
 
 NODE_CLASS_MAPPINGS = {
@@ -406,6 +484,7 @@ NODE_CLASS_MAPPINGS = {
     "HairDeckSaveGLB": HairDeckSaveGLB,
     "HairDeckRiggedGLB": HairDeckRiggedGLB,
     "HairDeckExportVRM": HairDeckExportVRM,
+    "HairDeckLoadAvatar": HairDeckLoadAvatar,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -414,4 +493,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "HairDeckSaveGLB": "HairDeck Save GLB",
     "HairDeckRiggedGLB": "HairDeck Rigged GLB",
     "HairDeckExportVRM": "HairDeck Export VRM",
+    "HairDeckLoadAvatar": "HairDeck Load Avatar",
 }

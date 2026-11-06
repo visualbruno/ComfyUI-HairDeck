@@ -261,6 +261,12 @@
           "name": "hair",
           "type": "HAIRDECK_HAIR",
           "link": 5
+        },
+        {
+          "name": "avatar",
+          "shape": 7,
+          "type": "HAIRDECK_AVATAR",
+          "link": null
         }
       ],
       "outputs": [
@@ -318,6 +324,12 @@
           "name": "hair",
           "type": "HAIRDECK_HAIR",
           "link": 6
+        },
+        {
+          "name": "avatar",
+          "shape": 7,
+          "type": "HAIRDECK_AVATAR",
+          "link": null
         }
       ],
       "outputs": [
@@ -388,9 +400,7 @@
         "cnr_id": "comfy-core",
         "ver": "0.43.0",
         "Node name for S&R": "PreviewImage"
-      },
-      "widgets_values": [],
-      "widgets_values_named": {}
+      }
     },
     {
       "id": 8,
@@ -424,9 +434,7 @@
         "cnr_id": "comfy-core",
         "ver": "0.43.0",
         "Node name for S&R": "PreviewImage"
-      },
-      "widgets_values": [],
-      "widgets_values_named": {}
+      }
     },
     {
       "id": 9,
@@ -578,26 +586,7 @@
           "backgroundColor": "#282828",
           "backgroundImage": "",
           "backgroundRenderMode": "tiled",
-          "models": [
-            {
-              "position": {
-                "x": 0,
-                "y": 0,
-                "z": 0
-              },
-              "quaternion": {
-                "x": 0,
-                "y": 0,
-                "z": 0,
-                "w": 1
-              },
-              "scale": {
-                "x": 1,
-                "y": 1,
-                "z": 1
-              }
-            }
-          ]
+          "models": []
         },
         "Model Config": {
           "upDirection": "original",
@@ -750,26 +739,7 @@
           "backgroundColor": "#282828",
           "backgroundImage": "",
           "backgroundRenderMode": "tiled",
-          "models": [
-            {
-              "position": {
-                "x": 0,
-                "y": 0,
-                "z": 0
-              },
-              "quaternion": {
-                "x": 0,
-                "y": 0,
-                "z": 0,
-                "w": 1
-              },
-              "scale": {
-                "x": 1,
-                "y": 1,
-                "z": 1
-              }
-            }
-          ]
+          "models": []
         },
         "Model Config": {
           "upDirection": "original",
@@ -902,10 +872,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.5644739300537774,
+      "scale": 0.5644739300537776,
       "offset": [
-        203.1510287400345,
-        746.4678378955324
+        233.10938730839348,
+        684.1312315376222
       ]
     },
     "frontendVersion": "1.57.6",
