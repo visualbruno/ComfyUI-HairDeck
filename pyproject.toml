@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-hairdeck"
 description = "ComfyUI nodes for HairDeck: animation-ready stylized hair cards and spring bones from a single image, as GLB, rigged GLB or VRM."
-version = "1.0.1"
+version = "1.0.2"
 license = {file = "LICENSE"}
 classifiers = [
     "Operating System :: Microsoft :: Windows",

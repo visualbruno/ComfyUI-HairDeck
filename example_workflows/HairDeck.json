@@ -83,17 +83,17 @@
         "on",
         true,
         true,
-        true,
         "",
+        "huggingface",
         "huggingface"
       ],
       "widgets_values_named": {
         "offload": "on",
         "load_chains": true,
-        "load_colors": true,
         "auto_download": true,
         "copy_from_workspace": "",
-        "gated_source": "huggingface"
+        "gated_source": "huggingface",
+        "load_colors": "huggingface"
       }
     },
     {
@@ -187,17 +187,17 @@
         "steps": 50,
         "cfg": 2,
         "generate_chains": true,
-        "colors": "HairDeck/hair",
-        "filename_prefix": true,
-        "invert_mask": true
+        "filename_prefix": "HairDeck/hair",
+        "invert_mask": true,
+        "colors": true
       }
     },
     {
       "id": 4,
       "type": "HairDeckSaveGLB",
       "pos": [
-        767.7887208251952,
-        -209.3973367004395
+        768.455407836914,
+        -211.3973367004395
       ],
       "size": [
         359.1127208251953,
@@ -533,22 +533,22 @@
           "fov": 35,
           "state": {
             "position": {
-              "x": -0.4647834082729076,
-              "y": 1.6121121585988012,
-              "z": -1.5422602977497442
+              "x": -0.46448988311195566,
+              "y": 1.6116430684456744,
+              "z": -1.542452869042021
             },
             "target": {
-              "x": 0.05735597366493842,
-              "y": 1.2424333231592695,
-              "z": 0.1541179217754165
+              "x": 0.057649498739118475,
+              "y": 1.2419642329085436,
+              "z": 0.15392535048858033
             },
             "zoom": 1,
             "cameraType": "perspective",
             "quaternion": {
-              "x": 0.015244920805748373,
-              "y": 0.9836683235592674,
-              "z": 0.10135150687993844,
-              "w": -0.14795977044079453
+              "x": 0.015244920807402862,
+              "y": 0.9836683235600042,
+              "z": 0.10135150690734636,
+              "w": -0.1479597704169511
             },
             "fov": 35,
             "aspect": 1,
@@ -562,7 +562,7 @@
             }
           }
         },
-        "Last Time Model File": "preview3d_advanced_fd18b2e0a59d45a0a576b989d184ea8b.glb",
+        "Last Time Model File": "preview3d_advanced_88a6f4c4da4d48f0a51b545bedc5ac99.glb",
         "Last Time Model Folder": "temp",
         "Light Config": {
           "intensity": 3,
@@ -602,7 +602,7 @@
         "Model Config": {
           "upDirection": "original",
           "materialMode": "original",
-          "showSkeleton": true,
+          "showSkeleton": false,
           "gizmo": {
             "enabled": false,
             "mode": "translate",
@@ -705,22 +705,22 @@
           "hasCustomUp": false,
           "state": {
             "position": {
-              "x": 0.3840640661137288,
-              "y": 1.614937181061654,
-              "z": 1.094586832654477
+              "x": 0.19480999976542804,
+              "y": 1.701366457794803,
+              "z": 0.9950298549840866
             },
             "target": {
-              "x": -0.2297375322252657,
-              "y": 1.296058499218069,
-              "z": -0.6840810167372802
+              "x": -0.034523468996383276,
+              "y": 1.2765765358169872,
+              "z": -0.32216513301858335
             },
             "zoom": 1,
             "cameraType": "perspective",
             "quaternion": {
-              "x": -0.08268552204768995,
-              "y": 0.16480162791689892,
-              "z": 0.013865796952855091,
-              "w": 0.9827569727834565
+              "x": -0.152640468244463,
+              "y": 0.08506676791677531,
+              "z": 0.013188719252291791,
+              "w": 0.9845255660137978
             },
             "fov": 35,
             "aspect": 1,
@@ -734,7 +734,7 @@
             }
           }
         },
-        "Last Time Model File": "preview3d_advanced_295dc4b033584a9791fdea21c7c1da9a.glb",
+        "Last Time Model File": "preview3d_advanced_861557c2c12646a7bf99fa54795ecaeb.glb",
         "Last Time Model Folder": "temp",
         "Light Config": {
           "intensity": 3,
@@ -774,7 +774,7 @@
         "Model Config": {
           "upDirection": "original",
           "materialMode": "original",
-          "showSkeleton": true,
+          "showSkeleton": false,
           "gizmo": {
             "enabled": false,
             "mode": "translate",
@@ -902,10 +902,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.620921323059155,
+      "scale": 0.5644739300537774,
       "offset": [
-        111.33560853927071,
-        622.8279410151333
+        203.1510287400345,
+        746.4678378955324
       ]
     },
     "frontendVersion": "1.57.6",

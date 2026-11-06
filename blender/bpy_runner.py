@@ -1,13 +1,18 @@
-"""Blender's command line on the bpy module: `python bpy_runner.py -b --python SCRIPT -- ARGS` runs SCRIPT as
-`blender -b --python SCRIPT -- ARGS` would (sys.argv[0] the script, ARGS after '--'), so HairDeck's Blender scripts
-and their callers work unchanged with bpy in place of a Blender install. Other Blender options are ignored.
+"""Set-up of HairDeck's Blender scripts, the same with the bpy module and with a Blender executable.
 
-Environment (set by hairdeck_env.blender_env before the bpy import, which reads them):
-  BLENDER_USER_*            Blender's user folders (the extensions repository the VRM Add-on goes into)
+bpy module: `python bpy_runner.py -b --python SCRIPT -- ARGS` runs SCRIPT as `blender -b --python SCRIPT -- ARGS`
+would (sys.argv[0] the script, ARGS after '--'), so HairDeck's Blender scripts and their callers work unchanged with bpy
+in place of a Blender install. Other Blender options are ignored.
+Blender executable: `blender -b --python bpy_runner.py -b --python SCRIPT -- ARGS`. Blender runs its --python scripts in
+order in one session, so this one only does the set-up and returns; Blender then runs SCRIPT itself, with the add-on
+enabled and the patches in place.
+
+Environment (read when Blender starts, so set by the caller: hairdeck_env.blender_user_env):
+  BLENDER_USER_*            Blender's user folders (the extensions repository the VRM Add-on goes into), so neither
+                            backend reads or changes the user's own Blender profile
   HAIRDECK_VRM_ADDON        module of the VRM Add-on for Blender (bl_ext.user_default.vrm, unpacked beforehand by
                             hairdeck_env.install_vrm_addon): enabled and patched before the script runs (Blender 5.2
                             glTF material export; MToon conversion in background mode)
-With a Blender executable the scripts run directly, without this runner.
 """
 import os
 import runpy
@@ -57,14 +62,21 @@ def patch_vrm_mtoon_convert(module):
     ops.convert_material_to_mtoon1 = convert_material_to_mtoon1
 
 
+def set_up():
+    if os.environ.get('HAIRDECK_VRM_ADDON'):
+        enable_vrm(os.environ['HAIRDECK_VRM_ADDON'])
+
+
 def main():
+    if 'bpy' in sys.modules:  # inside a Blender executable, which loads bpy before any --python script
+        set_up()
+        return
     argv = sys.argv[1:]
     script = argv[argv.index('--python') + 1]
     rest = argv[argv.index('--'):] if '--' in argv else []
     import bpy  # noqa: F401  (after the BLENDER_USER_* environment is in place)
 
-    if os.environ.get('HAIRDECK_VRM_ADDON'):
-        enable_vrm(os.environ['HAIRDECK_VRM_ADDON'])
+    set_up()
     sys.argv = [script] + rest
     runpy.run_path(script, run_name='__main__')
 

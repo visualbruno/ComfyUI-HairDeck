@@ -120,10 +120,6 @@ class HairDeckModelLoader:
                 "load_chains": ("BOOLEAN", {
                     "default": True,
                     "tooltip": "Load the chain DiT, which generates the spring bones. Needed for rigging and VRM."}),
-                "load_colors": ("BOOLEAN", {
-                    "default": True,
-                    "tooltip": "Load the colour model, which predicts 16 colours along every card. Off: one hair "
-                               "colour, measured from the image's hair mask."}),
                 "auto_download": ("BOOLEAN", {
                     "default": True,
                     "tooltip": "Fetch missing weights (~8 GB) into models/hairdeck. SAM 3 and DINOv3 are gated on "
@@ -137,6 +133,11 @@ class HairDeckModelLoader:
                 "gated_source": (["huggingface", "modelscope"], {
                     "default": "huggingface",
                     "tooltip": "Where SAM 3 and DINOv3 come from. Both are checked against the same sha256."}),
+                # Widgets added after the first release go last: saved workflows store widget values by position.
+                "load_colors": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "Load the colour model, which predicts 16 colours along every card. Off: one hair "
+                               "colour, measured from the image's hair mask."}),
             },
         }
 
@@ -147,8 +148,8 @@ class HairDeckModelLoader:
     DESCRIPTION = ("Loads the HairDeck pipeline: SAM 3 + BiRefNet preprocessing, DINOv3, the image DiT, the colour model "
                    "and the chain DiT.")
 
-    def load(self, offload, load_chains, load_colors, auto_download, copy_from_workspace="",
-             gated_source="huggingface"):
+    def load(self, offload, load_chains, auto_download, copy_from_workspace="", gated_source="huggingface",
+             load_colors=True):
         H.ensure_weights(auto_download, copy_from_workspace.strip().strip('"'), gated_source)
         device = mm.get_torch_device()
         key = (offload, bool(load_chains), bool(load_colors), str(device), str(H.workspace()))
@@ -185,9 +186,6 @@ class HairDeckGenerate:
                                   "tooltip": "Classifier-free guidance of the image DiT."}),
                 "generate_chains": ("BOOLEAN", {"default": True,
                                                 "tooltip": "Generate the spring-bone chains (needs load_chains)."}),
-                "colors": ("BOOLEAN", {"default": True,
-                                       "tooltip": "Colour every card with 16 colours from root to tip (needs "
-                                                  "load_colors). Off: one hair colour."}),
                 "filename_prefix": ("STRING", {"default": "HairDeck/hair",
                                                "tooltip": "Result folder under output/: <prefix>_00001_/."}),
             },
@@ -197,6 +195,10 @@ class HairDeckGenerate:
                 "invert_mask": ("BOOLEAN", {"default": False,
                                             "tooltip": "Turn on for the MASK of the core Load Image node, which is 1 "
                                                        "where the image is transparent."}),
+                # Widgets added after the first release go last: saved workflows store widget values by position.
+                "colors": ("BOOLEAN", {"default": True,
+                                       "tooltip": "Colour every card with 16 colours from root to tip (needs "
+                                                  "load_colors). Off: one hair colour."}),
             },
         }
 
@@ -214,8 +216,8 @@ class HairDeckGenerate:
     CATEGORY = CATEGORY
     DESCRIPTION = "Generates hair cards, their colours and spring-bone chains from one character image."
 
-    def generate(self, model, image, seed, steps, cfg, generate_chains, colors, filename_prefix, mask=None,
-                 invert_mask=False):
+    def generate(self, model, image, seed, steps, cfg, generate_chains, filename_prefix, mask=None,
+                 invert_mask=False, colors=True):
         from hairdeck.infer.glb import hair_trimesh
 
         if generate_chains and model.chain is None:
@@ -348,9 +350,10 @@ class HairDeckExportVRM:
                 "filename_prefix": ("STRING", {"default": "3D/HairDeck_avatar"}),
                 "blender": (BLENDER_BACKENDS, {
                     "default": "auto",
-                    "tooltip": "bpy: the bpy module in ComfyUI's Python, with the VRM Add-on installed automatically "
-                               "into models/hairdeck/blender_user. executable: a Blender with the VRM Add-on already "
-                               "enabled (blender_path or HAIRDECK_BLENDER). auto: bpy when installed."}),
+                    "tooltip": "bpy: the bpy module in ComfyUI's Python. executable: a Blender install (blender_path, "
+                               "HAIRDECK_BLENDER or the newest under Program Files). Both get the VRM Add-on "
+                               "automatically, in models/hairdeck/blender_user, never in your own Blender profile. "
+                               "auto: bpy when installed."}),
             },
             "optional": {
                 "blender_path": ("STRING", {"default": "", "tooltip": "blender.exe for the executable backend."}),
@@ -374,13 +377,14 @@ class HairDeckExportVRM:
 
         cmd, uses_bpy = H.blender_cmd(blender, blender_path)
         # HairDeck's export_vrm runs `HAIRDECK_BLENDER -b --python vrm_export.py -- ...` with this process's
-        # environment. With bpy that command is bpy_runner.py in ComfyUI's Python, which installs and enables the
-        # pinned VRM Add-on in the workspace's Blender user folders; an executable keeps its own profile.
-        override = dict(HAIRDECK_BLENDER=json.dumps(cmd),
+        # environment. bpy_runner.py enables the pinned VRM Add-on (unpacked into the workspace's Blender user folders)
+        # and patches it, before vrm_export.py: with bpy it is the command itself, run by ComfyUI's Python; with an
+        # executable it is a first --python script, and Blender runs vrm_export.py after it in the same session.
+        blender_argv = cmd if uses_bpy else cmd + ["-b", "--python", str(H.RUNNER)]
+        H.install_vrm_addon()
+        override = dict(H.blender_user_env(), HAIRDECK_BLENDER=json.dumps(blender_argv),
+                        HAIRDECK_VRM_ADDON=H.VRM_ADDON_MODULE,
                         HAIRDECK_VRM_WORK=os.path.join(folder_paths.get_temp_directory(), "hairdeck_vrm"))
-        if uses_bpy:
-            H.install_vrm_addon()
-            override.update(H.blender_user_env(), HAIRDECK_VRM_ADDON=H.VRM_ADDON_MODULE)
         with H.environ(**override):
             info = X.export_vrm(hair["out_dir"], hair["seed"], hair["hair_color"], render=False)
         path, rel, _ = _output_file(filename_prefix, "vrm")

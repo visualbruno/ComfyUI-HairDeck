@@ -34,6 +34,10 @@ their `model_3d` output connects to **Preview 3D**.
 An example workflow is in [example_workflows/HairDeck.json](example_workflows/HairDeck.json). Put your character
 image in ComfyUI's `input/` folder and select it in **Load Image**.
 
+ComfyUI stores a node's settings in a saved workflow by position. Version 1.0.1 inserted the color switches in the
+middle of the Model Loader and Generate Hair settings; they are now the last setting of each node. Workflows saved
+with 1.0.0 load correctly. In a workflow saved with 1.0.1, re-add those two nodes or load the example workflow again.
+
 ### Model Loader
 
 | Setting | Default | Meaning |
@@ -119,13 +123,13 @@ The `blender` setting on the Rigged GLB and VRM nodes:
   ```
   `bpy` 4.x and 5.0 are for Python 3.11. Installing `bpy` 5.2.3 into a Python 3.13 ComfyUI adds only `bpy`, `Cython`
   and `cattrs`.
-- `executable`: a Blender install. It is found from `blender_path`, then `HAIRDECK_BLENDER`, then the newest
-  `Program Files\Blender Foundation\Blender *`, then `blender` on the PATH. For the VRM export, that Blender must
-  already have the VRM Add-on enabled (HairDeck targets Blender 4.2 LTS).
+- `executable`: a Blender install, 4.2 LTS or later. It is found from `blender_path`, then `HAIRDECK_BLENDER`, then
+  the newest `Program Files\Blender Foundation\Blender *`, then `blender` on the PATH.
 
-With `bpy`, the VRM node installs the VRM Add-on for Blender that HairDeck pins (4.10.2, sha256-checked). It goes
-into `models/hairdeck/blender_user`, so your own Blender profile is never touched. The node also patches two things
-at run time:
+With either backend, the VRM node installs the VRM Add-on for Blender that HairDeck pins (4.10.2, sha256-checked).
+It goes into `models/hairdeck/blender_user`, and Blender runs with that folder as its user profile. So your own
+Blender profile and add-ons are never read or changed, and you don't need to install the VRM Add-on yourself. Before
+the export, the node also patches two things at run time:
 
 - **Blender 5.2's glTF exporter** returns three values where the add-on expects two, which made every material fail
   to export.
@@ -176,7 +180,7 @@ Measured on an RTX 3080 Laptop GPU (16 GB) with Python 3.13, torch 2.10 and CUDA
 | Model Loader (first run) | 15 s |
 | Generate Hair (preprocessing 4.1 s, cards 1.7 s, colors 1.2 s, chains 1.1 s) | 8 s |
 | Rigged GLB (`bpy`; 7 s through a Blender executable) | 1.5 s |
-| Export VRM (`bpy`) | 20 s |
+| Export VRM (`bpy`; 27 s through a Blender executable) | 20 s |
 
 Peak VRAM with offload `on` is about 6.7 GB, during matting.
 
